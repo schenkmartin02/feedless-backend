@@ -1,0 +1,16 @@
+${AnsiColor.BRIGHT_CYAN}
+ ███████╗███████╗███████╗██████╗ ██╗     ███████╗███████╗███████╗
+ ██╔════╝██╔════╝██╔════╝██╔══██╗██║     ██╔════╝██╔════╝██╔════╝
+ █████╗  █████╗  █████╗  ██║  ██║██║     █████╗  ███████╗███████╗
+ ██╔══╝  ██╔══╝  ██╔══╝  ██║  ██║██║     ██╔══╝  ╚════██║╚════██║
+ ██║     ███████╗███████╗██████╔╝███████╗███████╗███████║███████║
+ ╚═╝     ╚══════╝╚══════╝╚═════╝ ╚══════╝╚══════╝╚══════╝╚══════╝
+${AnsiColor.BRIGHT_MAGENTA}          » Statok, feedelés nélkül «  ·  feedless.gg
+${AnsiColor.BRIGHT_BLACK} ────────────────────────────────────────────────────────────────
+${AnsiColor.GREEN} App verzió   : ${AnsiColor.BRIGHT_WHITE}${application.version:dev}
+${AnsiColor.GREEN} Spring Boot  : ${AnsiColor.BRIGHT_WHITE}${spring-boot.version}
+${AnsiColor.GREEN} Java         : ${AnsiColor.BRIGHT_WHITE}${java.version} (${java.vendor})
+${AnsiColor.GREEN} Rendszer     : ${AnsiColor.BRIGHT_WHITE}${os.name}
+${AnsiColor.GREEN} Aktív profil : ${AnsiColor.BRIGHT_WHITE}${spring.profiles.active:default}
+${AnsiColor.BRIGHT_BLACK} ────────────────────────────────────────────────────────────────
+${AnsiColor.DEFAULT}
