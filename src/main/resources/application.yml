@@ -23,4 +23,4 @@ management:
       show-details: always
 
 riot:
-  api-key: ${RIOT_API_KEY:}
+  api-key: ${RIOT_KEY}
