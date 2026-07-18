@@ -42,7 +42,7 @@ Kérdezz vissza egyszer: biztos, hogy ezt nem akarja inkább maga megírni a tan
 
 ## Architektúra (tervezett fázisok)
 
-1. **Riot API kliens réteg** — MINDEN kimenő Riot-hívás ezen megy át. Központi rate limiter (personal key: 20 kérés/s ÉS 100 kérés/2 perc), 429-nél `Retry-After` header tisztelete, retry exponenciális backoffal. Endpointok: Account-V1, Summoner-V4, League-V4, Match-V5. Region routing: EUNE/EUW → `europe` (match), `eun1`/`euw1` (platform).
+1. **Riot API kliens réteg** — MINDEN kimenő Riot-hívás ezen megy át. Központi rate limiter (personal key: 500 kérés/10s ÉS 30000 kérés/10perc), 429-nél `Retry-After` header tisztelete, retry exponenciális backoffal. Endpointok: Account-V1, Summoner-V4, League-V4, Match-V5. Region routing: EUNE/EUW → `europe` (match), `eun1`/`euw1` (platform).
 2. **Perzisztencia** — fő táblák: `players` (puuid, riot id, rank), `matches` (match_id UNIQUE, patch, queue, időpont), `participants` (match + puuid + champion + statok). Tömeges insert batch-elt JDBC-vel.
 3. **Crawler** — `crawl_queue` tábla Postgresben, `@Scheduled` worker: játékos → match id lista → új meccsek letöltése → ismeretlen puuid-ok vissza a queue-ba. Seed: challenger/GM ladder.
 4. **Aggregáció** — ütemezett batch jobok, előre számolt statisztikák külön táblákba. A publikus API szinte csak ezekből olvas.

@@ -24,3 +24,6 @@ management:
 
 riot:
   api-key: ${RIOT_KEY}
+  rate-limit:
+    per-10-seconds: 500
+    per-10-minutes: 30000

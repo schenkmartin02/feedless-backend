@@ -1,7 +1,8 @@
 package gg.feedless.backend.riot;
 
-import gg.feedless.backend.riot.dto.AccountDto;
+import gg.feedless.backend.riot.dto.account.AccountDto;
 import gg.feedless.backend.riot.dto.match.MatchDto;
+import gg.feedless.backend.riot.dto.summoner.SummonerDto;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpStatus;
@@ -14,17 +15,18 @@ import java.util.Optional;
 
 @Component
 public class RiotApiClient {
-    private final RestClient riotApi;
+    private final RestClient europeApi;
+    private final RestClient eun1Api;
 
-    public RiotApiClient(@Qualifier("europeRestClient") RestClient riotApi) {
-        this.riotApi = riotApi;
+    public RiotApiClient(@Qualifier("europeRestClient") RestClient europeApi, @Qualifier("eun1RestClient") RestClient eun1Api) {
+        this.europeApi = europeApi;
+        this.eun1Api = eun1Api;
     }
-
 
     public Optional<AccountDto> getAccountByNameAndTag(String gameName, String tagLine) {
         AccountDto result;
         try {
-            result = riotApi.get().uri("/riot/account/v1/accounts/by-riot-id/{gameName}/{tagLine}", gameName, tagLine).retrieve().body(AccountDto.class);
+            result = europeApi.get().uri("/riot/account/v1/accounts/by-riot-id/{gameName}/{tagLine}", gameName, tagLine).retrieve().body(AccountDto.class);
         } catch (HttpClientErrorException error) {
             if (error.getStatusCode().equals(HttpStatus.NOT_FOUND)) {
                 return Optional.empty();
@@ -36,29 +38,15 @@ public class RiotApiClient {
     }
 
     public List<String> getMatchListByPuuidDefault(String puuid) {
-
-        List<String> result;
-        try {
-            ParameterizedTypeReference<List<String>> typeRef = new ParameterizedTypeReference<>() {};
-            result = riotApi.get().uri("/lol/match/v5/matches/by-puuid/{puuid}/ids?start=0&count=20", puuid).retrieve().body(typeRef);
-        } catch (HttpClientErrorException error) {
-            throw error;
-        }
-
-        return result;
+        ParameterizedTypeReference<List<String>> typeRef = new ParameterizedTypeReference<>() {};
+        return europeApi.get().uri("/lol/match/v5/matches/by-puuid/{puuid}/ids?start=0&count=10", puuid).retrieve().body(typeRef);
     }
 
-    public Optional<MatchDto> getMatchByMatchId(String matchId) {
-        MatchDto result;
-        try {
-            result = riotApi.get().uri("/lol/match/v5/matches/{matchId}", matchId).retrieve().body(MatchDto.class);
-        } catch (HttpClientErrorException error) {
-            if (error.getStatusCode().equals(HttpStatus.NOT_FOUND)) {
-                return Optional.empty();
-            } else {
-                throw error;
-            }
-        }
-        return Optional.ofNullable(result);
+    public MatchDto getMatchByMatchId(String matchId) {
+        return europeApi.get().uri("/lol/match/v5/matches/{matchId}", matchId).retrieve().body(MatchDto.class);
+    }
+
+    public SummonerDto getSummonerByPuuid(String puuid) {
+        return eun1Api.get().uri("/lol/summoner/v4/summoners/by-puuid/{puuid}", puuid).retrieve().body(SummonerDto.class);
     }
 }
