@@ -1,6 +1,7 @@
 package gg.feedless.backend.riot;
 
 import gg.feedless.backend.riot.dto.account.AccountDto;
+import gg.feedless.backend.riot.dto.league.LeagueEntryDto;
 import gg.feedless.backend.riot.dto.match.MatchDto;
 import gg.feedless.backend.riot.dto.summoner.SummonerDto;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -12,6 +13,7 @@ import org.springframework.web.client.RestClient;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 @Component
 public class RiotApiClient {
@@ -48,5 +50,10 @@ public class RiotApiClient {
 
     public SummonerDto getSummonerByPuuid(String puuid) {
         return eun1Api.get().uri("/lol/summoner/v4/summoners/by-puuid/{puuid}", puuid).retrieve().body(SummonerDto.class);
+    }
+
+    public Set<LeagueEntryDto> getLeagueByPuuid(String puuid) {
+        ParameterizedTypeReference<Set<LeagueEntryDto>> typeRef = new ParameterizedTypeReference<>() {};
+        return eun1Api.get().uri("/lol/league/v4/entries/by-puuid/{puuid}", puuid).retrieve().body(typeRef);
     }
 }
