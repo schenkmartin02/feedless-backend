@@ -1,0 +1,8 @@
+CREATE TABLE matches (
+    id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    match_id VARCHAR(32) NOT NULL UNIQUE,
+    patch VARCHAR(16) NOT NULL,
+    queue_id INT NOT NULL,
+    game_start TIMESTAMPTZ NOT NULL,
+    game_duration INT NOT NULL
+);
