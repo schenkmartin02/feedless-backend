@@ -39,6 +39,20 @@ public class RiotApiClient {
         return Optional.ofNullable(result);
     }
 
+    public Optional<AccountDto> getAccountByPuuid(String puuid) {
+        AccountDto result;
+        try {
+            result = europeApi.get().uri("/riot/account/v1/accounts/by-puuid/{puuid}", puuid).retrieve().body(AccountDto.class);
+        } catch (HttpClientErrorException error) {
+            if (error.getStatusCode().equals(HttpStatus.NOT_FOUND)) {
+                return Optional.empty();
+            } else {
+                throw error;
+            }
+        }
+        return Optional.ofNullable(result);
+    }
+
     public List<String> getMatchListByPuuidDefault(String puuid) {
         ParameterizedTypeReference<List<String>> typeRef = new ParameterizedTypeReference<>() {};
         return europeApi.get().uri("/lol/match/v5/matches/by-puuid/{puuid}/ids?start=0&count=10", puuid).retrieve().body(typeRef);

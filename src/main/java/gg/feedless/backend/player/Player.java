@@ -21,11 +21,15 @@ public class Player {
     @Column(name = "tag_line")
     private String tagLine;
 
+    @Column(name = "profile_icon_id")
+    private Integer profileIconId;
+
     @Column(name = "profile_updated_at")
     private OffsetDateTime profileUpdatedAt;
 
     // JPA Only
-    protected Player() {}
+    protected Player() {
+    }
 
     public Player(String puuid) {
         this.puuid = puuid;
@@ -53,6 +57,14 @@ public class Player {
 
     public void setTagLine(String tagLine) {
         this.tagLine = tagLine;
+    }
+
+    public int getProfileIconId() {
+        return profileIconId;
+    }
+
+    public void setProfileIconId(int profileIconId) {
+        this.profileIconId = profileIconId;
     }
 
     public OffsetDateTime getProfileUpdatedAt() {

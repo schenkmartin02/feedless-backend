@@ -24,12 +24,12 @@ public class Match {
     private OffsetDateTime gameStart;
 
     @Column(name = "game_duration", nullable = false)
-    private int gameDuration;
+    private long gameDuration;
 
     //JPA-Only
     protected Match() {}
 
-    public Match(String matchId, String patch, int queueId, OffsetDateTime gameStart, int gameDuration) {
+    public Match(String matchId, String patch, int queueId, OffsetDateTime gameStart, long gameDuration) {
         this.matchId = matchId;
         this.patch = patch;
         this.queueId = queueId;
@@ -57,7 +57,7 @@ public class Match {
         return gameStart;
     }
 
-    public int getGameDuration() {
+    public long getGameDuration() {
         return gameDuration;
     }
 }
