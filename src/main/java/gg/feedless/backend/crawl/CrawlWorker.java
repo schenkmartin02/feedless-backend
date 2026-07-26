@@ -13,6 +13,7 @@ import gg.feedless.backend.riot.dto.match.MatchDto;
 import gg.feedless.backend.riot.dto.summoner.SummonerDto;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -36,16 +37,26 @@ public class CrawlWorker {
 
     private final MatchIngestService matchIngestService;
 
-    public CrawlWorker(CrawlJobRepository crawlJobRepository, RiotApiClient riotApiClient, PlayerRepository playerRepository, PlayerRankRepository playerRankRepository, MatchRepository matchRepository, MatchIngestService matchIngestService) {
+    private final int profileTTLInDays;
+    private final int recrawlTTLInDays;
+    private final int batchSize;
+
+    private static final int NEW_CRAWL_MATCH_LIST = 20;
+    private static final int RE_CRAWL_MATCH_LIST = 100;
+
+    public CrawlWorker(CrawlJobRepository crawlJobRepository, RiotApiClient riotApiClient, PlayerRepository playerRepository, PlayerRankRepository playerRankRepository, MatchRepository matchRepository, MatchIngestService matchIngestService, @Value("${crawler.profile-refresh-ttl-days}") int profileTTLInDays, @Value("${crawler.recrawl.ttl-days}") int recrawlTTLInDays, @Value("${crawler.recrawl.batch-size}") int batchSize) {
         this.crawlJobRepository = crawlJobRepository;
         this.riotApiClient = riotApiClient;
         this.playerRepository = playerRepository;
         this.playerRankRepository = playerRankRepository;
         this.matchRepository = matchRepository;
         this.matchIngestService = matchIngestService;
+        this.profileTTLInDays = profileTTLInDays;
+        this.recrawlTTLInDays = recrawlTTLInDays;
+        this.batchSize = batchSize;
     }
 
-    @Scheduled(fixedDelay = 2_000)
+    @Scheduled(fixedDelay = 100)
     public void tick() {
         Optional<CrawlJob> job = crawlJobRepository.claimNextJob();
         if (job.isPresent()) {
@@ -56,7 +67,7 @@ public class CrawlWorker {
                 account = Optional.of(new Player(claimed.getPuuid()));
             }
             OffsetDateTime accountMustUpdateTime = account.get().getProfileUpdatedAt();
-            if (accountMustUpdateTime == null || claimed.getPriority() >= 2 || accountMustUpdateTime.isBefore(OffsetDateTime.now().minusDays(1))) {
+            if (accountMustUpdateTime == null || claimed.getPriority() >= 2 || accountMustUpdateTime.isBefore(OffsetDateTime.now().minusDays(profileTTLInDays))) {
                 Optional<AccountDto> accountByRiot = riotApiClient.getAccountByPuuid(claimed.getPuuid());
                 if (accountByRiot.isEmpty()) {
                     if (claimed.getRetryCounter() >= 4) {
@@ -109,8 +120,12 @@ public class CrawlWorker {
                             );
                 }
             }
-
-            List<String> matchList = riotApiClient.getMatchListByPuuidDefault(claimed.getPuuid());
+            List<String> matchList;
+            if (claimed.getLastCrawledAt() == null) {
+                matchList = riotApiClient.getMatchListByPuuid(claimed.getPuuid(), NEW_CRAWL_MATCH_LIST);
+            } else {
+                matchList = riotApiClient.getMatchListByPuuid(claimed.getPuuid(), RE_CRAWL_MATCH_LIST);
+            }
             List<Match> existMatchList = matchRepository.findByMatchIdIn(matchList);
             Set<String> existingMatchIds = existMatchList.stream()
                     .map(Match::getMatchId)
@@ -128,6 +143,15 @@ public class CrawlWorker {
             claimed.setStatus(CrawlStatus.DONE);
             claimed.setPriority(0);
             crawlJobRepository.save(claimed);
+        }
+    }
+
+    @Transactional
+    @Scheduled(fixedDelayString = "${crawler.recrawl.interval-ms}")
+    public void scheduleRecrawl() {
+        int result = crawlJobRepository.scheduleRecrawl(OffsetDateTime.now().minusDays(recrawlTTLInDays), batchSize);
+        if (result > 0) {
+            log.info("Reset {} stale crawl jobs to new crawling", result);
         }
     }
 

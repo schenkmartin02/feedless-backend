@@ -53,9 +53,9 @@ public class RiotApiClient {
         return Optional.ofNullable(result);
     }
 
-    public List<String> getMatchListByPuuidDefault(String puuid) {
+    public List<String> getMatchListByPuuid(String puuid, int count) {
         ParameterizedTypeReference<List<String>> typeRef = new ParameterizedTypeReference<>() {};
-        return europeApi.get().uri("/lol/match/v5/matches/by-puuid/{puuid}/ids?start=0&count=10", puuid).retrieve().body(typeRef);
+        return europeApi.get().uri("/lol/match/v5/matches/by-puuid/{puuid}/ids?start=0&count={count}", puuid, count).retrieve().body(typeRef);
     }
 
     public MatchDto getMatchByMatchId(String matchId) {

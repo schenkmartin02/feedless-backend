@@ -89,4 +89,32 @@ class CrawlJobRepositoryTest {
         assertEquals(CrawlStatus.IN_PROGRESS, result2.get().getStatus());
 
     }
+
+    @Test
+    void scheduleRecrawl() {
+        CrawlJob testJob = new CrawlJob("recovery", 0);
+        testJob.setStatus(CrawlStatus.DONE);
+        crawlJobRepository.save(testJob);
+
+        CrawlJob testJob2 = new CrawlJob("recovery2", 0);
+        testJob2.setStatus(CrawlStatus.DONE);
+        testJob2.setLastCrawledAt(OffsetDateTime.now().minusDays(2));
+        crawlJobRepository.save(testJob2);
+
+        CrawlJob testJob3 = new CrawlJob("recovery3", 0);
+        testJob3.setStatus(CrawlStatus.DONE);
+        testJob3.setLastCrawledAt(OffsetDateTime.now().minusDays(2));
+        crawlJobRepository.save(testJob3);
+
+        int resultSum = crawlJobRepository.scheduleRecrawl(OffsetDateTime.now().minusDays(1), 1);
+        Optional<CrawlJob> result = crawlJobRepository.findByPuuid("recovery");
+        Optional<CrawlJob> result2 = crawlJobRepository.findByPuuid("recovery2");
+        Optional<CrawlJob> result3 = crawlJobRepository.findByPuuid("recovery3");
+
+        assertEquals(1, resultSum);
+        assertEquals(CrawlStatus.DONE, result.get().getStatus());
+        assertNull(result.get().getStartedAt());
+        assertEquals(CrawlStatus.PENDING, result2.get().getStatus());
+        assertEquals(0, result3.get().getPriority());
+    }
 }
