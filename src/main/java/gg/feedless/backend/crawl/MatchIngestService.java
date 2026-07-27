@@ -81,6 +81,13 @@ public class MatchIngestService {
             return List.of();
         }
 
+        long distinctPuuidCount = participantDtos.stream().map(ParticipantDto::puuid).distinct().count();
+        if (distinctPuuidCount != participantDtos.size()) {
+            log.warn("Match {}: {} participants but only {} distinct puuids, storing the match without participants",
+                    matchId, participantDtos.size(), distinctPuuidCount);
+            return List.of();
+        }
+
         List<String> unresolvedPuuids = participantDtos.stream()
                 .map(ParticipantDto::puuid)
                 .filter(puuid -> !playerMap.containsKey(puuid))
