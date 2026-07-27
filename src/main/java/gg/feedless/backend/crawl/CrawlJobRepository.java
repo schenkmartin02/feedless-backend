@@ -33,11 +33,18 @@ public interface CrawlJobRepository extends JpaRepository<CrawlJob, Long> {
 
     @Modifying(clearAutomatically = true)
     @Query(value = """
-        UPDATE crawl_queue
-        SET status = 'PENDING', started_at = null
-        WHERE status = 'IN_PROGRESS' AND started_at < :cutoff
-        """, nativeQuery = true)
+            UPDATE crawl_queue
+            SET
+                status = CASE
+                            WHEN retry_counter + 1 >= 10 THEN 'ERROR'
+                            ELSE 'PENDING'
+                         END,
+                started_at = null,
+                retry_counter = retry_counter + 1
+            WHERE status = 'IN_PROGRESS' AND started_at < :cutoff
+            """, nativeQuery = true)
     int recovery(@Param("cutoff") OffsetDateTime cutoff);
+
 
     @Modifying(clearAutomatically = true)
     @Query(value = """

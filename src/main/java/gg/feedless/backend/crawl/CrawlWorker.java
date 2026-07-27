@@ -142,6 +142,7 @@ public class CrawlWorker {
             claimed.setLastCrawledAt(OffsetDateTime.now());
             claimed.setStatus(CrawlStatus.DONE);
             claimed.setPriority(0);
+            claimed.setRetryCounter(0);
             crawlJobRepository.save(claimed);
         }
     }
