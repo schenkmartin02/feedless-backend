@@ -43,6 +43,7 @@ public class CrawlWorker {
 
     private static final int NEW_CRAWL_MATCH_LIST = 20;
     private static final int RE_CRAWL_MATCH_LIST = 100;
+    private static final int MATCH_LIST_START_TIME = 30;
 
     public CrawlWorker(CrawlJobRepository crawlJobRepository, RiotApiClient riotApiClient, PlayerRepository playerRepository, PlayerRankRepository playerRankRepository, MatchRepository matchRepository, MatchIngestService matchIngestService, @Value("${crawler.profile-refresh-ttl-days}") int profileTTLInDays, @Value("${crawler.recrawl.ttl-days}") int recrawlTTLInDays, @Value("${crawler.recrawl.batch-size}") int batchSize) {
         this.crawlJobRepository = crawlJobRepository;
@@ -121,11 +122,8 @@ public class CrawlWorker {
                 }
             }
             List<String> matchList;
-            if (claimed.getLastCrawledAt() == null) {
-                matchList = riotApiClient.getMatchListByPuuid(claimed.getPuuid(), NEW_CRAWL_MATCH_LIST);
-            } else {
-                matchList = riotApiClient.getMatchListByPuuid(claimed.getPuuid(), RE_CRAWL_MATCH_LIST);
-            }
+            int count = claimed.getLastCrawledAt() == null ? NEW_CRAWL_MATCH_LIST : RE_CRAWL_MATCH_LIST;
+            matchList = riotApiClient.getMatchListByPuuid(claimed.getPuuid(), count, OffsetDateTime.now().minusDays(MATCH_LIST_START_TIME).toEpochSecond());
             List<Match> existMatchList = matchRepository.findByMatchIdIn(matchList);
             Set<String> existingMatchIds = existMatchList.stream()
                     .map(Match::getMatchId)

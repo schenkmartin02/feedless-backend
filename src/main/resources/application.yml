@@ -33,4 +33,4 @@ crawler:
   recrawl:
     interval-ms: 60000
     ttl-days: 2
-    batch-size: 16
+    batch-size: 8
