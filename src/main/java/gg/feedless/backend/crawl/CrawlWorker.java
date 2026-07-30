@@ -19,9 +19,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
 import java.util.stream.Collectors;
 
 @Service
@@ -37,6 +41,8 @@ public class CrawlWorker {
 
     private final MatchIngestService matchIngestService;
 
+    private final ExecutorService executorService;
+
     private final int profileTTLInDays;
     private final int recrawlTTLInDays;
     private final int batchSize;
@@ -45,7 +51,7 @@ public class CrawlWorker {
     private static final int RE_CRAWL_MATCH_LIST = 100;
     private static final int MATCH_LIST_START_TIME = 30;
 
-    public CrawlWorker(CrawlJobRepository crawlJobRepository, RiotApiClient riotApiClient, PlayerRepository playerRepository, PlayerRankRepository playerRankRepository, MatchRepository matchRepository, MatchIngestService matchIngestService, @Value("${crawler.profile-refresh-ttl-days}") int profileTTLInDays, @Value("${crawler.recrawl.ttl-days}") int recrawlTTLInDays, @Value("${crawler.recrawl.batch-size}") int batchSize) {
+    public CrawlWorker(CrawlJobRepository crawlJobRepository, RiotApiClient riotApiClient, PlayerRepository playerRepository, PlayerRankRepository playerRankRepository, MatchRepository matchRepository, MatchIngestService matchIngestService, @Value("${crawler.profile-refresh-ttl-days}") int profileTTLInDays, @Value("${crawler.recrawl.ttl-days}") int recrawlTTLInDays, @Value("${crawler.recrawl.batch-size}") int batchSize, ExecutorService executorService) {
         this.crawlJobRepository = crawlJobRepository;
         this.riotApiClient = riotApiClient;
         this.playerRepository = playerRepository;
@@ -55,6 +61,7 @@ public class CrawlWorker {
         this.profileTTLInDays = profileTTLInDays;
         this.recrawlTTLInDays = recrawlTTLInDays;
         this.batchSize = batchSize;
+        this.executorService = executorService;
     }
 
     @Scheduled(fixedDelay = 100)
@@ -81,7 +88,7 @@ public class CrawlWorker {
                     crawlJobRepository.save(claimed);
                     return;
                 }
-                SummonerDto summonerInfo = riotApiClient.getSummonerByPuuid(claimed.getPuuid());
+                SummonerDto summonerInfo = riotApiClient.getSummonerByPuuid("eune" ,claimed.getPuuid());
                 account.get().setGameName(accountByRiot.get().gameName());
                 account.get().setTagLine(accountByRiot.get().tagLine());
                 account.get().setProfileIconId(summonerInfo.profileIconId());
@@ -132,9 +139,20 @@ public class CrawlWorker {
                     .filter(matchId -> !existingMatchIds.contains(matchId))
                     .toList();
 
+            List<Future<MatchDto>> matchFutureList = new ArrayList<>();
             for (String matchId: newMatchIdList){
-                MatchDto match = riotApiClient.getMatchByMatchId(matchId);
-                matchIngestService.ingest(match);
+                matchFutureList.add(executorService.submit(() -> riotApiClient.getMatchByMatchId(matchId)));
+            }
+            for (int i = 0; i < matchFutureList.size(); i++) {
+                try {
+                    matchIngestService.ingest(matchFutureList.get(i).get());
+                } catch (InterruptedException e) {
+                    log.error("Match: {} letöltése sikertelen", newMatchIdList.get(i), e);
+                    Thread.currentThread().interrupt();
+                    return;
+                } catch (ExecutionException e) {
+                    log.warn("Match: {} letöltése sikertelen", newMatchIdList.get(i), e);
+                }
             }
 
             claimed.setLastCrawledAt(OffsetDateTime.now());

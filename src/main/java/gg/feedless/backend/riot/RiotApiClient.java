@@ -19,10 +19,12 @@ import java.util.Set;
 public class RiotApiClient {
     private final RestClient europeApi;
     private final RestClient eun1Api;
+    private final RestClient euw1Api;
 
-    public RiotApiClient(@Qualifier("europeRestClient") RestClient europeApi, @Qualifier("eun1RestClient") RestClient eun1Api) {
+    public RiotApiClient(@Qualifier("europeRestClient") RestClient europeApi, @Qualifier("eun1RestClient") RestClient eun1Api, @Qualifier("euw1RestClient") RestClient euw1Api) {
         this.europeApi = europeApi;
         this.eun1Api = eun1Api;
+        this.euw1Api = euw1Api;
     }
 
     public Optional<AccountDto> getAccountByNameAndTag(String gameName, String tagLine) {
@@ -62,8 +64,13 @@ public class RiotApiClient {
         return europeApi.get().uri("/lol/match/v5/matches/{matchId}", matchId).retrieve().body(MatchDto.class);
     }
 
-    public SummonerDto getSummonerByPuuid(String puuid) {
-        return eun1Api.get().uri("/lol/summoner/v4/summoners/by-puuid/{puuid}", puuid).retrieve().body(SummonerDto.class);
+    public SummonerDto getSummonerByPuuid(String region, String puuid) {
+        if (region.equals("eune")) {
+            return eun1Api.get().uri("/lol/summoner/v4/summoners/by-puuid/{puuid}", puuid).retrieve().body(SummonerDto.class);
+        } else {
+            return euw1Api.get().uri("/lol/summoner/v4/summoners/by-puuid/{puuid}", puuid).retrieve().body(SummonerDto.class);
+        }
+
     }
 
     public Set<LeagueEntryDto> getLeagueByPuuid(String puuid) {
