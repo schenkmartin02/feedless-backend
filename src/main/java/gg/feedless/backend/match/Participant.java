@@ -1,10 +1,7 @@
 package gg.feedless.backend.match;
 
 import gg.feedless.backend.riot.dto.match.ParticipantDto;
-import gg.feedless.backend.riot.dto.match.PerksDto;
 import jakarta.persistence.*;
-import org.hibernate.annotations.JdbcTypeCode;
-import org.hibernate.type.SqlTypes;
 
 @Entity
 @Table(name = "participants")
@@ -131,9 +128,29 @@ public class Participant {
     @Column(name = "keystone_id", nullable = false)
     private int keystoneId;
 
-    @JdbcTypeCode(SqlTypes.JSON)
-    @Column(name = "perks", nullable = false)
-    private PerksDto perks;
+    @Column(name = "stat_perk_defense", nullable = false)
+    private int statPerkDefense;
+
+    @Column(name = "stat_perk_flex", nullable = false)
+    private int statPerkFlex;
+
+    @Column(name = "stat_perk_offense", nullable = false)
+    private int statPerkOffense;
+
+    @Column(name = "primary_perk_2", nullable = false)
+    private int primaryPerk2;
+
+    @Column(name = "primary_perk_3", nullable = false)
+    private int primaryPerk3;
+
+    @Column(name = "primary_perk_4", nullable = false)
+    private int primaryPerk4;
+
+    @Column(name = "sub_perk_1", nullable = false)
+    private int subPerk1;
+
+    @Column(name = "sub_perk_2", nullable = false)
+    private int subPerk2;
 
     //JPA-Only
     protected Participant() {
@@ -180,7 +197,14 @@ public class Participant {
         p.primaryStyleId = dto.perks().styles().getFirst().style();
         p.subStyleId = dto.perks().styles().getLast().style();
         p.keystoneId = dto.perks().styles().getFirst().selections().getFirst().perk();
-        p.perks = dto.perks();
+        p.statPerkDefense = dto.perks().statPerks().defense();
+        p.statPerkFlex = dto.perks().statPerks().flex();
+        p.statPerkOffense = dto.perks().statPerks().offense();
+        p.primaryPerk2 = dto.perks().styles().getFirst().selections().get(1).perk();
+        p.primaryPerk3 = dto.perks().styles().getFirst().selections().get(2).perk();
+        p.primaryPerk4 = dto.perks().styles().getFirst().selections().get(3).perk();
+        p.subPerk1 = dto.perks().styles().getLast().selections().getFirst().perk();
+        p.subPerk2 = dto.perks().styles().getLast().selections().getLast().perk();
         return p;
     }
 
@@ -345,7 +369,35 @@ public class Participant {
         return keystoneId;
     }
 
-    public PerksDto getPerks() {
-        return perks;
+    public int getStatPerkDefense() {
+        return statPerkDefense;
+    }
+
+    public int getStatPerkFlex() {
+        return statPerkFlex;
+    }
+
+    public int getStatPerkOffense() {
+        return statPerkOffense;
+    }
+
+    public int getPrimaryPerk2() {
+        return primaryPerk2;
+    }
+
+    public int getPrimaryPerk3() {
+        return primaryPerk3;
+    }
+
+    public int getPrimaryPerk4() {
+        return primaryPerk4;
+    }
+
+    public int getSubPerk1() {
+        return subPerk1;
+    }
+
+    public int getSubPerk2() {
+        return subPerk2;
     }
 }
