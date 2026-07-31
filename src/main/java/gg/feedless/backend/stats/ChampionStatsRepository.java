@@ -3,7 +3,13 @@ package gg.feedless.backend.stats;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.time.Instant;
+import java.util.Collection;
+import java.util.List;
+import java.util.Optional;
 
 public interface ChampionStatsRepository extends JpaRepository<ChampionStats, Long> {
     @Transactional
@@ -60,4 +66,56 @@ public interface ChampionStatsRepository extends JpaRepository<ChampionStats, Lo
                        updated_at = NOW()
             """, nativeQuery = true)
     int recomputeChampionStats();
+
+    @Query(value = """
+    WITH aggregated AS (
+    SELECT
+        champion_id,
+        team_position,
+        SUM(games)                   AS games,
+        SUM(wins)                    AS wins,
+        SUM(sum_kills)               AS kills,
+        SUM(sum_deaths)              AS deaths,
+        SUM(sum_assists)             AS assists,
+        SUM(sum_cs)                  AS cs,
+        SUM(sum_gold_earned)         AS gold,
+        SUM(sum_damage_to_champions) AS damage,
+        SUM(sum_duration)            AS duration
+    FROM champion_stats
+    WHERE patch = :patch
+      AND queue_id = :queueId
+      AND rank_tier IN (:tiers)
+    GROUP BY champion_id, team_position), with_role_total AS (
+    SELECT a.*,
+           SUM(a.games) OVER (PARTITION BY a.team_position) AS role_total
+    FROM aggregated a)
+    SELECT
+        champion_id   AS "championId",
+        team_position AS "teamPosition",
+        games         AS "games",
+        round((100.0 * wins / games)::numeric, 2)::float8                     AS "winRate",
+        round((100.0 * games / role_total)::numeric, 2)::float8               AS "pickRate",
+        round(((kills + assists)::numeric / GREATEST(deaths, 1)), 2)::float8  AS "kda",
+        round((cs     * 60.0 / NULLIF(duration, 0))::numeric, 2)::float8      AS "csPerMinute",
+        round((gold   * 60.0 / NULLIF(duration, 0))::numeric, 2)::float8      AS "goldPerMinute",
+        round((damage * 60.0 / NULLIF(duration, 0))::numeric, 2)::float8      AS "damagePerMinute",
+        round((kills::numeric   / games), 2)::float8  AS "avgKills",
+        round((deaths::numeric  / games), 2)::float8  AS "avgDeaths",
+        round((assists::numeric / games), 2)::float8  AS "avgAssists"
+    FROM with_role_total
+    WHERE games >= :minGames
+    ORDER BY games DESC
+    """, nativeQuery = true)
+    List<ChampionStatsView> getChampionStats(@Param("patch") String patch, @Param("queueId") int queueId, @Param("tiers") Collection<String> tiers, @Param("minGames") int minGames);
+
+    @Query(value = """
+        SELECT MAX(updated_at) FROM champion_stats WHERE patch = :patch AND queue_id = :queueId
+    """, nativeQuery = true)
+    Optional<Instant> getLastUpdatedAt(@Param("patch") String patch, @Param("queueId") int queueId);
+
+    @Query(value = """
+    SELECT COUNT(DISTINCT champion_id) FROM champion_stats
+    WHERE patch = :patch AND queue_id = :queueId
+    """, nativeQuery = true)
+    int getTotalChampion(@Param("patch") String patch, @Param("queueId") int queueId);
 }
