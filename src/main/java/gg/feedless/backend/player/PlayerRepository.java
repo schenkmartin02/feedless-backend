@@ -13,15 +13,18 @@ public interface PlayerRepository extends JpaRepository<Player, Long> {
 
     @Modifying
     @Query(value = """
-            INSERT INTO players (puuid, game_name, tag_line, profile_icon_id)
-            VALUES (:puuid, :gameName, :tagLine, :profileIconId)
-            ON CONFLICT (puuid) DO NOTHING
+            INSERT INTO players (puuid, game_name, tag_line, profile_icon_id, platform)
+            VALUES (:puuid, :gameName, :tagLine, :profileIconId, :platform)
+            ON CONFLICT (puuid) DO UPDATE
+            SET platform = EXCLUDED.platform
+            WHERE players.platform IS DISTINCT FROM EXCLUDED.platform
             """, nativeQuery = true)
     void addNewPlayerFromMatch(
             @Param("puuid") String puuid,
             @Param("gameName") String gameName,
             @Param("tagLine") String tagLine,
-            @Param("profileIconId") int profileIconId
+            @Param("profileIconId") int profileIconId,
+            @Param("platform") String platform
     );
 
     List<Player> findByPuuidIn(List<String> puuids);

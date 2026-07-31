@@ -11,10 +11,11 @@ public interface MatchupStatsRepository extends JpaRepository<MatchupStats, Long
     @Query(value = """
 
             INSERT INTO matchup_stats (
-        patch, queue_id, team_position, champion_id, opponent_champion_id,
+        platform, patch, queue_id, team_position, champion_id, opponent_champion_id,
         games, wins, updated_at
     )
     SELECT
+        m.platform,
         m.patch,
         m.queue_id,
         p1.team_position,
@@ -31,12 +32,13 @@ public interface MatchupStatsRepository extends JpaRepository<MatchupStats, Long
     WHERE m.game_duration >= 300
       AND p1.team_position <> ''
     GROUP BY
+        m.platform,
         m.patch,
         m.queue_id,
         p1.team_position,
         p1.champion_id,
         p2.champion_id
-    ON CONFLICT (patch, queue_id, champion_id, team_position, opponent_champion_id)
+    ON CONFLICT (platform, patch, queue_id, champion_id, team_position, opponent_champion_id)
     DO UPDATE SET
         games = EXCLUDED.games,
         wins = EXCLUDED.wins,

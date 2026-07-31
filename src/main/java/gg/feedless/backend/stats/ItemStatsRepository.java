@@ -11,10 +11,11 @@ public interface ItemStatsRepository extends JpaRepository<ItemStats, Long> {
     @Query(value = """
 
             INSERT INTO item_stats (
-            patch, queue_id, champion_id, team_position, item_id,
+            platform, patch, queue_id, champion_id, team_position, item_id,
             games, wins, updated_at
         )
         SELECT
+            m.platform,
             m.patch,
             m.queue_id,
             p.champion_id,
@@ -30,12 +31,13 @@ public interface ItemStatsRepository extends JpaRepository<ItemStats, Long> {
         WHERE m.game_duration >= 300
           AND it.item_id <> 0
         GROUP BY
+            m.platform,
             m.patch,
             m.queue_id,
             p.champion_id,
             p.team_position,
             it.item_id
-        ON CONFLICT (patch, queue_id, champion_id, team_position, item_id)
+        ON CONFLICT (platform, patch, queue_id, champion_id, team_position, item_id)
         DO UPDATE SET
             games = EXCLUDED.games,
             wins = EXCLUDED.wins,

@@ -44,8 +44,10 @@ public class MatchIngestService {
                 ? List.of()
                 : matchDto.info().participants();
 
+        String platform = matchId.split("_")[0];
+
         for (ParticipantDto participant: participantDtos) {
-            playerRepository.addNewPlayerFromMatch(participant.puuid(), participant.riotIdGameName(), participant.riotIdTagline(), participant.profileIcon());
+            playerRepository.addNewPlayerFromMatch(participant.puuid(), participant.riotIdGameName(), participant.riotIdTagline(), participant.profileIcon(), platform);
         }
         List<String> participantPuuids = participantDtos.stream().map(ParticipantDto::puuid).toList();
         List<Player> players = playerRepository.findByPuuidIn(participantPuuids);

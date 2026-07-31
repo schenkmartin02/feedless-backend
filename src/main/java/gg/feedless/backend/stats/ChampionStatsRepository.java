@@ -16,12 +16,13 @@ public interface ChampionStatsRepository extends JpaRepository<ChampionStats, Lo
     @Modifying
     @Query(value = """
             INSERT INTO champion_stats (
-                       patch, queue_id, champion_id, team_position, rank_tier,
+                       platform, patch, queue_id, champion_id, team_position, rank_tier,
                        games, wins, sum_kills, sum_deaths, sum_assists,
                        sum_gold_earned, sum_cs, sum_damage_to_champions,
                        sum_vision_score, sum_duration, updated_at
                    )
                    SELECT
+                       m.platform,
                        m.patch,
                        m.queue_id,
                        p.champion_id,
@@ -45,13 +46,14 @@ public interface ChampionStatsRepository extends JpaRepository<ChampionStats, Lo
                                             AND pr.queue_type = 'RANKED_SOLO_5x5'
                    WHERE m.game_duration >= 300
                    GROUP BY
+                       m.platform,
                        m.patch,
                        m.queue_id,
                        p.champion_id,
                        p.team_position,
                        COALESCE(pr.tier, 'UNKNOWN')
             
-                   ON CONFLICT (patch, queue_id, champion_id, team_position, rank_tier)
+                   ON CONFLICT (platform, patch, queue_id, champion_id, team_position, rank_tier)
                    DO UPDATE SET
                        games = EXCLUDED.games,
                        wins = EXCLUDED.wins,
@@ -85,6 +87,7 @@ public interface ChampionStatsRepository extends JpaRepository<ChampionStats, Lo
     WHERE patch = :patch
       AND queue_id = :queueId
       AND rank_tier IN (:tiers)
+      AND platform = :platform
     GROUP BY champion_id, team_position), with_role_total AS (
     SELECT a.*,
            SUM(a.games) OVER (PARTITION BY a.team_position) AS role_total
@@ -106,16 +109,16 @@ public interface ChampionStatsRepository extends JpaRepository<ChampionStats, Lo
     WHERE games >= :minGames
     ORDER BY games DESC
     """, nativeQuery = true)
-    List<ChampionStatsView> getChampionStats(@Param("patch") String patch, @Param("queueId") int queueId, @Param("tiers") Collection<String> tiers, @Param("minGames") int minGames);
+    List<ChampionStatsView> getChampionStats(@Param("patch") String patch, @Param("queueId") int queueId, @Param("tiers") Collection<String> tiers, @Param("minGames") int minGames, @Param("platform") String platform);
 
     @Query(value = """
-        SELECT MAX(updated_at) FROM champion_stats WHERE patch = :patch AND queue_id = :queueId
+        SELECT MAX(updated_at) FROM champion_stats WHERE patch = :patch AND queue_id = :queueId AND platform = :platform
     """, nativeQuery = true)
-    Optional<Instant> getLastUpdatedAt(@Param("patch") String patch, @Param("queueId") int queueId);
+    Optional<Instant> getLastUpdatedAt(@Param("patch") String patch, @Param("queueId") int queueId, @Param("platform") String platform);
 
     @Query(value = """
     SELECT COUNT(DISTINCT champion_id) FROM champion_stats
-    WHERE patch = :patch AND queue_id = :queueId
+    WHERE patch = :patch AND queue_id = :queueId AND platform = :platform
     """, nativeQuery = true)
-    int getTotalChampion(@Param("patch") String patch, @Param("queueId") int queueId);
+    int getTotalChampion(@Param("patch") String patch, @Param("queueId") int queueId, @Param("platform") String platform);
 }

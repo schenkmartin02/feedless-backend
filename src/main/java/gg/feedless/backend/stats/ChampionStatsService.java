@@ -27,11 +27,11 @@ public class ChampionStatsService {
         this.championCatalog = championCatalog;
     }
 
-    public ChampionStatsListResponse getChampionStats(QueueType queue, BracketType bracket, String region, String patch, Integer minGames) {
+    public ChampionStatsListResponse getChampionStats(QueueType queue, BracketType bracket, RegionType region, String patch, Integer minGames) {
         int queueId = queue.getQueue();
         Set<String> tiers = bracket.getTiers();
         Scope scope = new Scope(queue.name().toLowerCase(),
-                bracket.name().toLowerCase(), region);
+                bracket.name().toLowerCase(), region.name());
         if (minGames == null) {
             minGames = DEFAULT_MIN_GAMES;
         }
@@ -44,12 +44,12 @@ public class ChampionStatsService {
             }
         }
 
-        List<ChampionStatsView> rows = championStatsRepository.getChampionStats(patch, queueId, tiers, minGames);
+        List<ChampionStatsView> rows = championStatsRepository.getChampionStats(patch, queueId, tiers, minGames, region.getPlatform());
 
-        int totalChamps = championStatsRepository.getTotalChampion(patch, queueId);
+        int totalChamps = championStatsRepository.getTotalChampion(patch, queueId, region.getPlatform());
 
         Long updatedMinutesAgo = championStatsRepository.getLastUpdatedAt(patch,
-                        queueId)
+                        queueId, region.getPlatform())
                 .map(t -> Duration.between(t, Instant.now()).toMinutes())
                 .orElse(null);
 

@@ -10,10 +10,11 @@ public interface RuneStatsRepository extends JpaRepository<RuneStats, Long> {
     @Modifying
     @Query(value = """
             INSERT INTO rune_stats (
-            patch, queue_id, champion_id, team_position, rank_tier,
+            platform, patch, queue_id, champion_id, team_position, rank_tier,
             keystone_id, games, wins, updated_at
             )
             SELECT
+                m.platform,
                 m.patch,
                 m.queue_id,
                 p.champion_id,
@@ -30,13 +31,14 @@ public interface RuneStatsRepository extends JpaRepository<RuneStats, Long> {
             WHERE m.game_duration >= 300
               AND p.keystone_id > 0
             GROUP BY
+                m.platform,
                 m.patch,
                 m.queue_id,
                 p.champion_id,
                 p.team_position,
                 COALESCE(pr.tier, 'UNKNOWN'),
                 p.keystone_id
-            ON CONFLICT (patch, queue_id, champion_id, team_position, rank_tier,
+            ON CONFLICT (platform, patch, queue_id, champion_id, team_position, rank_tier,
                    keystone_id)
             DO UPDATE SET
                 games = EXCLUDED.games,
