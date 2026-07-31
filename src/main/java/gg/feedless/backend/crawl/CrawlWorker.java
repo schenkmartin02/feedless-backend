@@ -3,7 +3,6 @@ package gg.feedless.backend.crawl;
 import gg.feedless.backend.match.Match;
 import gg.feedless.backend.match.MatchRepository;
 import gg.feedless.backend.player.Player;
-import gg.feedless.backend.player.PlayerRank;
 import gg.feedless.backend.player.PlayerRankRepository;
 import gg.feedless.backend.player.PlayerRepository;
 import gg.feedless.backend.riot.RiotApiClient;
@@ -95,37 +94,11 @@ public class CrawlWorker {
                 account.get().setProfileUpdatedAt(OffsetDateTime.now());
                 playerRepository.save(account.get());
 
-                List<PlayerRank> leagues = playerRankRepository.findByPlayerId(account.get().getId());
                 Set<LeagueEntryDto> leaguesFromRiot = riotApiClient.getLeagueByPuuid(claimed.getPuuid());
 
                 for (LeagueEntryDto riotEntry : leaguesFromRiot) {
-
-                    Optional<Player> finalAccount = account;
-                    leagues.stream()
-                            .filter(dbRank -> dbRank.getQueueType().equals(riotEntry.queueType()))
-                            .findFirst()
-                            .ifPresentOrElse(
-                                    existingRank -> {
-                                        existingRank.setTier(riotEntry.tier());
-                                        existingRank.setDivision(riotEntry.rank());
-                                        existingRank.setLeaguePoints(riotEntry.leaguePoints());
-                                        existingRank.setWins(riotEntry.wins());
-                                        existingRank.setLosses(riotEntry.losses());
-                                        playerRankRepository.save(existingRank);
-                                    },
-                                    () -> {
-                                        PlayerRank newRank = new PlayerRank(
-                                                finalAccount.get().getId(),
-                                                riotEntry.queueType(),
-                                                riotEntry.tier(),
-                                                riotEntry.rank(),
-                                                riotEntry.leaguePoints(),
-                                                riotEntry.wins(),
-                                                riotEntry.losses()
-                                        );
-                                        playerRankRepository.save(newRank);
-                                    }
-                            );
+                    playerRankRepository.upsertPlayerRank(claimed.getPuuid(), riotEntry.queueType(), riotEntry.tier(),
+                            riotEntry.rank(), riotEntry.leaguePoints(), riotEntry.wins(), riotEntry.losses());
                 }
             }
             List<String> matchList;
