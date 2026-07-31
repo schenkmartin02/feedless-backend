@@ -180,4 +180,27 @@ public class CrawlWorker {
             log.warn("Recovered {} stale crawl jobs stuck in IN_PROGRESS", result);
         }
     }
+
+    @Transactional
+    @Scheduled(fixedDelay = 100)
+    public void backfillPlayerRanks() {
+        List<String> players = playerRepository.findTopUnrankedPuuids("EUN1", OffsetDateTime.now().minusDays(30), 20);
+        List<String> donePuuid = new ArrayList<>();
+        for (String puuid : players) {
+            try {
+                Set<LeagueEntryDto> leagueEntryDtos = riotApiClient.getLeagueByPuuid(puuid);
+                for (LeagueEntryDto league : leagueEntryDtos) {
+                    playerRankRepository.upsertPlayerRank(puuid, league.queueType(), league.tier(), league.rank(), league.leaguePoints(), league.wins(), league.losses());
+                }
+                donePuuid.add(puuid);
+            } catch (Exception e) {
+                log.error("Hiba: {}", puuid, e);
+            }
+        }
+        int puuids = 0;
+        if (!donePuuid.isEmpty()) {
+            puuids = playerRepository.saveRankCheck(donePuuid);
+        }
+        log.info("{} player ranks is up to date", puuids);
+    }
 }
