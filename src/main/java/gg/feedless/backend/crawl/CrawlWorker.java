@@ -12,6 +12,7 @@ import gg.feedless.backend.riot.dto.match.MatchDto;
 import gg.feedless.backend.riot.dto.summoner.SummonerDto;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -40,7 +41,8 @@ public class CrawlWorker {
 
     private final MatchIngestService matchIngestService;
 
-    private final ExecutorService executorService;
+    private final ExecutorService matchExecutorService;
+    private final ExecutorService rankExecutorService;
 
     private final int profileTTLInDays;
     private final int recrawlTTLInDays;
@@ -50,7 +52,7 @@ public class CrawlWorker {
     private static final int RE_CRAWL_MATCH_LIST = 100;
     private static final int MATCH_LIST_START_TIME = 30;
 
-    public CrawlWorker(CrawlJobRepository crawlJobRepository, RiotApiClient riotApiClient, PlayerRepository playerRepository, PlayerRankRepository playerRankRepository, MatchRepository matchRepository, MatchIngestService matchIngestService, @Value("${crawler.profile-refresh-ttl-days}") int profileTTLInDays, @Value("${crawler.recrawl.ttl-days}") int recrawlTTLInDays, @Value("${crawler.recrawl.batch-size}") int batchSize, ExecutorService executorService) {
+    public CrawlWorker(CrawlJobRepository crawlJobRepository, RiotApiClient riotApiClient, PlayerRepository playerRepository, PlayerRankRepository playerRankRepository, MatchRepository matchRepository, MatchIngestService matchIngestService, @Value("${crawler.profile-refresh-ttl-days}") int profileTTLInDays, @Value("${crawler.recrawl.ttl-days}") int recrawlTTLInDays, @Value("${crawler.recrawl.batch-size}") int batchSize, @Qualifier("matchFetchExecutor") ExecutorService matchExecutorService, @Qualifier("rankFetchExecutor") ExecutorService rankExecutorService) {
         this.crawlJobRepository = crawlJobRepository;
         this.riotApiClient = riotApiClient;
         this.playerRepository = playerRepository;
@@ -60,7 +62,8 @@ public class CrawlWorker {
         this.profileTTLInDays = profileTTLInDays;
         this.recrawlTTLInDays = recrawlTTLInDays;
         this.batchSize = batchSize;
-        this.executorService = executorService;
+        this.matchExecutorService = matchExecutorService;
+        this.rankExecutorService = rankExecutorService;
     }
 
     @Scheduled(fixedDelay = 100)
@@ -114,7 +117,7 @@ public class CrawlWorker {
 
             List<Future<MatchDto>> matchFutureList = new ArrayList<>();
             for (String matchId: newMatchIdList){
-                matchFutureList.add(executorService.submit(() -> riotApiClient.getMatchByMatchId(matchId)));
+                matchFutureList.add(matchExecutorService.submit(() -> riotApiClient.getMatchByMatchId(matchId)));
             }
             for (int i = 0; i < matchFutureList.size(); i++) {
                 try {
@@ -155,19 +158,25 @@ public class CrawlWorker {
     }
 
     @Transactional
-    @Scheduled(fixedDelay = 100)
+    @Scheduled(fixedDelay = 60_000)
     public void backfillPlayerRanks() {
-        List<String> players = playerRepository.findTopUnrankedPuuids("EUN1", OffsetDateTime.now().minusDays(30), 20);
+        List<String> players = playerRepository.findTopUnrankedPuuids("EUN1", OffsetDateTime.now().minusDays(30), 1000);
         List<String> donePuuid = new ArrayList<>();
+        List<Future<Set<LeagueEntryDto>>> leagueEntryFuture = new ArrayList<>();
         for (String puuid : players) {
+            leagueEntryFuture.add(rankExecutorService.submit(() -> riotApiClient.getLeagueByPuuid(puuid)));
+        }
+        for (int i = 0; i < leagueEntryFuture.size(); i++) {
             try {
-                Set<LeagueEntryDto> leagueEntryDtos = riotApiClient.getLeagueByPuuid(puuid);
-                for (LeagueEntryDto league : leagueEntryDtos) {
-                    playerRankRepository.upsertPlayerRank(puuid, league.queueType(), league.tier(), league.rank(), league.leaguePoints(), league.wins(), league.losses());
+                for (LeagueEntryDto league : leagueEntryFuture.get(i).get()) {
+                    playerRankRepository.upsertPlayerRank(players.get(i), league.queueType(), league.tier(), league.rank(), league.leaguePoints(), league.wins(), league.losses());
                 }
-                donePuuid.add(puuid);
-            } catch (Exception e) {
-                log.error("Hiba: {}", puuid, e);
+                donePuuid.add(players.get(i));
+            } catch (ExecutionException e) {
+                log.error("ExecutionExceptionError: puuid: {}, message: ", players.get(i), e);
+            } catch (InterruptedException e) {
+                log.error("InterruptedExceptionError: puuid: {}, message: ", players.get(i), e);
+                break;
             }
         }
         int puuids = 0;

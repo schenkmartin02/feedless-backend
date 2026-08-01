@@ -14,4 +14,9 @@ public class ExecutorConfig {
         return Executors.newFixedThreadPool(5);
     }
 
+    @Bean
+    public ExecutorService rankFetchExecutor() {
+        return Executors.newFixedThreadPool(10);
+    }
+
 }

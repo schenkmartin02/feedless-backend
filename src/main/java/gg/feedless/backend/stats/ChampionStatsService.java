@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.*;
 
 @Service
@@ -18,7 +19,7 @@ public class ChampionStatsService {
     private final MatchRepository matchRepository;
     private final ChampionCatalog championCatalog;
 
-    private static final int DEFAULT_MIN_GAMES = 50;
+    public static final int DEFAULT_MIN_GAMES = 200;
 
     private static final double MIN_FEATURED_PICK_RATE = 2.0;
 
@@ -45,7 +46,7 @@ public class ChampionStatsService {
             }
         }
 
-        List<ChampionStatsView> rows = championStatsRepository.getChampionStats(patch, queueId, tiers, minGames, region.getPlatform());
+        List<ChampionStatsView> rows = championStatsRepository.getChampionStats(patch, queueId, tiers, minGames, region.getPlatform(), bracket.name().toLowerCase(), LocalDate.now().minusDays(1));
 
         int totalChamps = championStatsRepository.getTotalChampion(patch, queueId, region.getPlatform());
 
@@ -56,7 +57,7 @@ public class ChampionStatsService {
 
         List<ChampionStatsResponse> championStatsResponses = rows.stream().map(view ->
                 new ChampionStatsResponse(championCatalog.getChampionKey(view.getChampionId()), toApiRole(view.getTeamPosition()),
-                        null, view.getWinRate(), view.getPickRate(), null, view.getKda(), null,
+                        view.getTier(), view.getWinRate(), view.getPickRate(), null, view.getKda(), view.getTrend(),
                         view.getGames(), view.getCsPerMinute(), view.getGoldPerMinute(), view.getAvgKills(),
                         view.getAvgDeaths(), view.getAvgAssists())).toList();
 
@@ -79,7 +80,7 @@ public class ChampionStatsService {
             }
         }
 
-        List<ChampionStatsView> rows = championStatsRepository.getChampionStats(patch, queueId, tiers, minGames, region.getPlatform());
+        List<ChampionStatsView> rows = championStatsRepository.getChampionStats(patch, queueId, tiers, minGames, region.getPlatform(), bracket.name().toLowerCase(), LocalDate.now().minusDays(1));
 
         List<ChampionStatsView> sorted = rows.stream()
                 .filter(view -> view.getPickRate() >= MIN_FEATURED_PICK_RATE)

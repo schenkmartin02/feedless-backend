@@ -12,4 +12,6 @@ public interface ChampionStatsView {
     Double getAvgKills();
     Double getAvgDeaths();
     Double getAvgAssists();
+    String getTier();
+    Integer getTrend();
 }
