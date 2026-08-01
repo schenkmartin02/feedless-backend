@@ -19,13 +19,15 @@ public class StatsAggregator {
     private final ItemStatsRepository itemStatsRepository;
     private final MatchupStatsRepository matchupStatsRepository;
     private final MatchRepository matchRepository;
+    private final ChampionBanStatsRepository championBanStatsRepository;
 
-    public StatsAggregator(ChampionStatsRepository championStatsRepository, RuneStatsRepository runeStatsRepository, ItemStatsRepository itemStatsRepository, MatchupStatsRepository matchupStatsRepository, MatchRepository matchRepository) {
+    public StatsAggregator(ChampionStatsRepository championStatsRepository, RuneStatsRepository runeStatsRepository, ItemStatsRepository itemStatsRepository, MatchupStatsRepository matchupStatsRepository, MatchRepository matchRepository, ChampionBanStatsRepository championBanStatsRepository) {
         this.championStatsRepository = championStatsRepository;
         this.runeStatsRepository = runeStatsRepository;
         this.itemStatsRepository = itemStatsRepository;
         this.matchupStatsRepository = matchupStatsRepository;
         this.matchRepository = matchRepository;
+        this.championBanStatsRepository = championBanStatsRepository;
     }
 
     @Scheduled(fixedDelay = 3600_000)
@@ -65,6 +67,16 @@ public class StatsAggregator {
             log.info("Recomputed {} matchup stat rows", affectedRows);
         } else {
             log.warn("Recomputed {} matchup stat rows", affectedRows);
+        }
+    }
+
+    @Scheduled(fixedDelay = 3600_000)
+    public void recomputeChampionBanStats(){
+        int affectedRows = championBanStatsRepository.recomputeChampionBanStats();
+        if (affectedRows > 0) {
+            log.info("Recomputed {} champion ban stat rows", affectedRows);
+        } else {
+            log.warn("Recomputed {} champion ban stat rows", affectedRows);
         }
     }
 

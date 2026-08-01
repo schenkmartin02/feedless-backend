@@ -6,8 +6,10 @@ import gg.feedless.backend.match.Participant;
 import gg.feedless.backend.match.ParticipantRepository;
 import gg.feedless.backend.player.Player;
 import gg.feedless.backend.player.PlayerRepository;
+import gg.feedless.backend.riot.dto.match.BanDto;
 import gg.feedless.backend.riot.dto.match.MatchDto;
 import gg.feedless.backend.riot.dto.match.ParticipantDto;
+import gg.feedless.backend.riot.dto.match.TeamDto;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -66,7 +68,9 @@ public class MatchIngestService {
                 patch = parts[0];
             }
         }
-        Match match = new Match(matchId, patch, matchDto.info().queueId(), gameStart, matchDto.info().gameDuration());
+        List<TeamDto> teams = matchDto.info().teams() == null ? List.of() : matchDto.info().teams();
+        List<Integer> bans = teams.stream().flatMap(team -> team.bans().stream()).map(BanDto::championId).filter(championId -> championId != -1).toList();
+        Match match = new Match(matchId, patch, matchDto.info().queueId(), gameStart, matchDto.info().gameDuration(), bans);
         Match savedMatch = matchRepository.save(match);
 
         participantRepository.saveAll(buildParticipants(matchId, savedMatch.getId(), participantDtos, playerMap));

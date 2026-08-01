@@ -3,6 +3,7 @@ package gg.feedless.backend.match;
 import jakarta.persistence.*;
 
 import java.time.OffsetDateTime;
+import java.util.List;
 
 @Entity
 @Table(name = "matches")
@@ -26,15 +27,19 @@ public class Match {
     @Column(name = "game_duration", nullable = false)
     private long gameDuration;
 
+    @Column(name = "bans")
+    private List<Integer> bans;
+
     //JPA-Only
     protected Match() {}
 
-    public Match(String matchId, String patch, int queueId, OffsetDateTime gameStart, long gameDuration) {
+    public Match(String matchId, String patch, int queueId, OffsetDateTime gameStart, long gameDuration, List<Integer> bans) {
         this.matchId = matchId;
         this.patch = patch;
         this.queueId = queueId;
         this.gameStart = gameStart;
         this.gameDuration = gameDuration;
+        this.bans = bans;
     }
 
     public Long getId() {
@@ -59,5 +64,9 @@ public class Match {
 
     public long getGameDuration() {
         return gameDuration;
+    }
+
+    public List<Integer> getBans() {
+        return bans;
     }
 }

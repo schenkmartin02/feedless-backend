@@ -57,7 +57,7 @@ public class ChampionStatsService {
 
         List<ChampionStatsResponse> championStatsResponses = rows.stream().map(view ->
                 new ChampionStatsResponse(championCatalog.getChampionKey(view.getChampionId()), toApiRole(view.getTeamPosition()),
-                        view.getTier(), view.getWinRate(), view.getPickRate(), null, view.getKda(), view.getTrend(),
+                        view.getTier(), view.getWinRate(), view.getPickRate(), view.getBanRate(), view.getKda(), view.getTrend(),
                         view.getGames(), view.getCsPerMinute(), view.getGoldPerMinute(), view.getAvgKills(),
                         view.getAvgDeaths(), view.getAvgAssists())).toList();
 

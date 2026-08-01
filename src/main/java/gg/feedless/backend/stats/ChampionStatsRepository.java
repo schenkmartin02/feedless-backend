@@ -71,35 +71,34 @@ public interface ChampionStatsRepository extends JpaRepository<ChampionStats, Lo
     int recomputeChampionStats();
 
     @Query(value = """
-
-            WITH aggregated AS (
-        SELECT
-            champion_id,
-            team_position,
-            SUM(games)                   AS games,
-            SUM(wins)                    AS wins,
-            SUM(sum_kills)               AS kills,
-            SUM(sum_deaths)              AS deaths,
-            SUM(sum_assists)             AS assists,
-            SUM(sum_cs)                  AS cs,
-            SUM(sum_gold_earned)         AS gold,
-            SUM(sum_damage_to_champions) AS damage,
-            SUM(sum_duration)            AS duration
-        FROM champion_stats
-        WHERE platform = :platform
-          AND patch = :patch
-          AND queue_id = :queueId
-          AND rank_tier IN (:tiers)
-        GROUP BY champion_id, team_position
+    WITH aggregated AS (
+    SELECT
+        champion_id,
+        team_position,
+        SUM(games)                   AS games,
+        SUM(wins)                    AS wins,
+        SUM(sum_kills)               AS kills,
+        SUM(sum_deaths)              AS deaths,
+        SUM(sum_assists)             AS assists,
+        SUM(sum_cs)                  AS cs,
+        SUM(sum_gold_earned)         AS gold,
+        SUM(sum_damage_to_champions) AS damage,
+        SUM(sum_duration)            AS duration
+    FROM champion_stats
+    WHERE platform = :platform
+      AND patch = :patch
+      AND queue_id = :queueId
+      AND rank_tier IN (:tiers)
+    GROUP BY champion_id, team_position
     ),
     with_role_total AS (
-        SELECT\s
+        SELECT
             a.*,
             SUM(a.games) OVER (PARTITION BY a.team_position) AS role_total
         FROM aggregated a
     ),
     filtered AS (
-        SELECT\s
+        SELECT
             f.*,
             PERCENT_RANK() OVER (
                 PARTITION BY f.team_position
@@ -112,20 +111,50 @@ public interface ChampionStatsRepository extends JpaRepository<ChampionStats, Lo
             COUNT(*) OVER (PARTITION BY f.team_position) AS role_pool
         FROM with_role_total f
         WHERE f.games >= :minGames
+    ),
+    ban_scope AS (
+        SELECT
+            rank_tier,
+            MAX(total_matches) AS total_matches
+        FROM champion_ban_stats
+        WHERE platform = :platform
+          AND patch = :patch
+          AND queue_id = :queueId
+          AND rank_tier IN (:tiers)
+        GROUP BY rank_tier
+    ),
+    ban_total AS (
+        SELECT SUM(total_matches) AS total_matches
+        FROM ban_scope
+    ),
+    ban AS (
+        SELECT
+            champion_id,
+            SUM(bans) AS bans
+        FROM champion_ban_stats
+        WHERE platform = :platform
+          AND patch = :patch
+          AND queue_id = :queueId
+          AND rank_tier IN (:tiers)
+        GROUP BY champion_id
     )
     SELECT
         f.champion_id   AS "championId",
         f.team_position AS "teamPosition",
         f.games         AS "games",
-        round((100.0 * f.wins / f.games)::numeric, 2)::float8                    AS "winRate",
-        round((100.0 * f.games / f.role_total)::numeric, 2)::float8              AS "pickRate",
+        round((100.0 * f.wins / f.games)::numeric, 2)::float8                      AS "winRate",
+        round((100.0 * f.games / f.role_total)::numeric, 2)::float8                AS "pickRate",
+        CASE
+            WHEN bt.total_matches IS NULL OR bt.total_matches = 0 THEN NULL::float8
+            ELSE round((100.0 * COALESCE(b.bans, 0) / bt.total_matches)::numeric, 2)::float8
+        END AS "banRate",
         round(((f.kills + f.assists)::numeric / GREATEST(f.deaths, 1)), 2)::float8 AS "kda",
-        round((f.cs     * 60.0 / NULLIF(f.duration, 0))::numeric, 2)::float8     AS "csPerMinute",
-        round((f.gold   * 60.0 / NULLIF(f.duration, 0))::numeric, 2)::float8     AS "goldPerMinute",
-        round((f.damage * 60.0 / NULLIF(f.duration, 0))::numeric, 2)::float8     AS "damagePerMinute",
-        round((f.kills::numeric   / f.games), 2)::float8                         AS "avgKills",
-        round((f.deaths::numeric  / f.games), 2)::float8                         AS "avgDeaths",
-        round((f.assists::numeric / f.games), 2)::float8                         AS "avgAssists",
+        round((f.cs     * 60.0 / NULLIF(f.duration, 0))::numeric, 2)::float8       AS "csPerMinute",
+        round((f.gold   * 60.0 / NULLIF(f.duration, 0))::numeric, 2)::float8       AS "goldPerMinute",
+        round((f.damage * 60.0 / NULLIF(f.duration, 0))::numeric, 2)::float8       AS "damagePerMinute",
+        round((f.kills::numeric   / f.games), 2)::float8                           AS "avgKills",
+        round((f.deaths::numeric  / f.games), 2)::float8                           AS "avgDeaths",
+        round((f.assists::numeric / f.games), 2)::float8                           AS "avgAssists",
         CASE
             WHEN f.role_pool < 20   THEN NULL::varchar
             WHEN f.tier_rank < 0.05 THEN 'S+'
@@ -137,6 +166,8 @@ public interface ChampionStatsRepository extends JpaRepository<ChampionStats, Lo
         END AS "tier",
         (s.rank_position - f.today_rank)::int AS "trend"
     FROM filtered f
+    CROSS JOIN ban_total bt
+    LEFT JOIN ban b ON b.champion_id = f.champion_id
     LEFT JOIN champion_rank_snapshot s
            ON s.snapshot_date = :yesterday
           AND s.platform      = :platform

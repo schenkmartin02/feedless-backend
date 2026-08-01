@@ -14,4 +14,5 @@ public interface ChampionStatsView {
     Double getAvgAssists();
     String getTier();
     Integer getTrend();
+    Double getBanRate();
 }
