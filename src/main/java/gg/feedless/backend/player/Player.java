@@ -27,6 +27,9 @@ public class Player {
     @Column(name = "profile_updated_at")
     private OffsetDateTime profileUpdatedAt;
 
+    @Column(name = "platform")
+    private String platform;
+
     // JPA Only
     protected Player() {
     }
@@ -73,5 +76,13 @@ public class Player {
 
     public void setProfileUpdatedAt(OffsetDateTime profileUpdatedAt) {
         this.profileUpdatedAt = profileUpdatedAt;
+    }
+
+    public String getPlatform() {
+        return platform;
+    }
+
+    public void setPlatform(String platform) {
+        this.platform = platform;
     }
 }

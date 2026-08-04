@@ -14,9 +14,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.HttpServerErrorException;
+import org.springframework.web.client.ResourceAccessException;
 
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
@@ -71,71 +75,86 @@ public class CrawlWorker {
         Optional<CrawlJob> job = crawlJobRepository.claimNextJob();
         if (job.isPresent()) {
             CrawlJob claimed = job.get();
-            log.info("Claimed job for puuid {}", claimed.getPuuid());
-            Optional<Player> account = playerRepository.findByPuuid(claimed.getPuuid());
-            if (account.isEmpty()) {
-                account = Optional.of(new Player(claimed.getPuuid()));
-            }
-            OffsetDateTime accountMustUpdateTime = account.get().getProfileUpdatedAt();
-            if (accountMustUpdateTime == null || claimed.getPriority() >= 2 || accountMustUpdateTime.isBefore(OffsetDateTime.now().minusDays(profileTTLInDays))) {
-                Optional<AccountDto> accountByRiot = riotApiClient.getAccountByPuuid(claimed.getPuuid());
-                if (accountByRiot.isEmpty()) {
-                    if (claimed.getRetryCounter() >= 4) {
-                        claimed.setStatus(CrawlStatus.ERROR);
+            try {
+
+                log.info("Claimed job for puuid {}", claimed.getPuuid());
+                Optional<Player> account = playerRepository.findByPuuid(claimed.getPuuid());
+                if (account.isEmpty()) {
+                    account = Optional.of(new Player(claimed.getPuuid()));
+                }
+                OffsetDateTime accountMustUpdateTime = account.get().getProfileUpdatedAt();
+                if (accountMustUpdateTime == null || claimed.getPriority() >= 2 || accountMustUpdateTime.isBefore(OffsetDateTime.now().minusDays(profileTTLInDays))) {
+                    Optional<AccountDto> accountByRiot = riotApiClient.getAccountByPuuid(claimed.getPuuid());
+                    if (accountByRiot.isEmpty()) {
+                        if (claimed.getRetryCounter() >= 4) {
+                            claimed.setStatus(CrawlStatus.ERROR);
+                            crawlJobRepository.save(claimed);
+                            return;
+                        }
+                        claimed.setRetryCounter(claimed.getRetryCounter() + 1);
+                        claimed.setStatus(CrawlStatus.PENDING);
                         crawlJobRepository.save(claimed);
                         return;
                     }
+                    Player finalAccount = account.get();
+                    Optional<SummonerDto> summonerInfo = riotApiClient.getSummonerByPuuid(finalAccount.getPlatform() ,claimed.getPuuid());
+                    finalAccount.setGameName(accountByRiot.get().gameName());
+                    finalAccount.setTagLine(accountByRiot.get().tagLine());
+                    summonerInfo.ifPresent(info -> finalAccount.setProfileIconId(info.profileIconId()));
+                    finalAccount.setProfileUpdatedAt(OffsetDateTime.now());
+                    playerRepository.save(finalAccount);
+
+                    Set<LeagueEntryDto> leaguesFromRiot = riotApiClient.getLeagueByPuuid(claimed.getPuuid(), finalAccount.getPlatform());
+
+                    for (LeagueEntryDto riotEntry : leaguesFromRiot) {
+                        playerRankRepository.upsertPlayerRank(claimed.getPuuid(), riotEntry.queueType(), riotEntry.tier(),
+                                riotEntry.rank(), riotEntry.leaguePoints(), riotEntry.wins(), riotEntry.losses());
+                    }
+                }
+                List<String> matchList;
+                int count = claimed.getLastCrawledAt() == null ? NEW_CRAWL_MATCH_LIST : RE_CRAWL_MATCH_LIST;
+                matchList = riotApiClient.getMatchListByPuuid(claimed.getPuuid(), count, OffsetDateTime.now().minusDays(MATCH_LIST_START_TIME).toEpochSecond());
+                List<Match> existMatchList = matchRepository.findByMatchIdIn(matchList);
+                Set<String> existingMatchIds = existMatchList.stream()
+                        .map(Match::getMatchId)
+                        .collect(Collectors.toSet());
+                List<String> newMatchIdList = matchList.stream()
+                        .filter(matchId -> !existingMatchIds.contains(matchId))
+                        .toList();
+
+                List<Future<MatchDto>> matchFutureList = new ArrayList<>();
+                for (String matchId: newMatchIdList){
+                    matchFutureList.add(matchExecutorService.submit(() -> riotApiClient.getMatchByMatchId(matchId)));
+                }
+                for (int i = 0; i < matchFutureList.size(); i++) {
+                    try {
+                        matchIngestService.ingest(matchFutureList.get(i).get());
+                    } catch (InterruptedException e) {
+                        log.error("Match: {} letöltése sikertelen", newMatchIdList.get(i), e);
+                        Thread.currentThread().interrupt();
+                        return;
+                    } catch (ExecutionException e) {
+                        log.warn("Match: {} letöltése sikertelen", newMatchIdList.get(i), e);
+                    }
+                }
+
+                claimed.setLastCrawledAt(OffsetDateTime.now());
+                claimed.setStatus(CrawlStatus.DONE);
+                claimed.setPriority(0);
+                claimed.setRetryCounter(0);
+                crawlJobRepository.save(claimed);
+            } catch (ResourceAccessException | HttpServerErrorException error) {
+                log.error("Error for {}", claimed.getPuuid(), error);
+                claimed.setStatus(CrawlStatus.PENDING);
+                crawlJobRepository.save(claimed);
+            } catch (HttpClientErrorException error) {
+                if (error.getStatusCode() == HttpStatus.NOT_FOUND) {
                     claimed.setRetryCounter(claimed.getRetryCounter() + 1);
-                    claimed.setStatus(CrawlStatus.PENDING);
-                    crawlJobRepository.save(claimed);
-                    return;
                 }
-                SummonerDto summonerInfo = riotApiClient.getSummonerByPuuid("eune" ,claimed.getPuuid());
-                account.get().setGameName(accountByRiot.get().gameName());
-                account.get().setTagLine(accountByRiot.get().tagLine());
-                account.get().setProfileIconId(summonerInfo.profileIconId());
-                account.get().setProfileUpdatedAt(OffsetDateTime.now());
-                playerRepository.save(account.get());
-
-                Set<LeagueEntryDto> leaguesFromRiot = riotApiClient.getLeagueByPuuid(claimed.getPuuid());
-
-                for (LeagueEntryDto riotEntry : leaguesFromRiot) {
-                    playerRankRepository.upsertPlayerRank(claimed.getPuuid(), riotEntry.queueType(), riotEntry.tier(),
-                            riotEntry.rank(), riotEntry.leaguePoints(), riotEntry.wins(), riotEntry.losses());
-                }
+                log.error("Error for {}", claimed.getPuuid(), error);
+                claimed.setStatus(CrawlStatus.PENDING);
+                crawlJobRepository.save(claimed);
             }
-            List<String> matchList;
-            int count = claimed.getLastCrawledAt() == null ? NEW_CRAWL_MATCH_LIST : RE_CRAWL_MATCH_LIST;
-            matchList = riotApiClient.getMatchListByPuuid(claimed.getPuuid(), count, OffsetDateTime.now().minusDays(MATCH_LIST_START_TIME).toEpochSecond());
-            List<Match> existMatchList = matchRepository.findByMatchIdIn(matchList);
-            Set<String> existingMatchIds = existMatchList.stream()
-                    .map(Match::getMatchId)
-                    .collect(Collectors.toSet());
-            List<String> newMatchIdList = matchList.stream()
-                    .filter(matchId -> !existingMatchIds.contains(matchId))
-                    .toList();
-
-            List<Future<MatchDto>> matchFutureList = new ArrayList<>();
-            for (String matchId: newMatchIdList){
-                matchFutureList.add(matchExecutorService.submit(() -> riotApiClient.getMatchByMatchId(matchId)));
-            }
-            for (int i = 0; i < matchFutureList.size(); i++) {
-                try {
-                    matchIngestService.ingest(matchFutureList.get(i).get());
-                } catch (InterruptedException e) {
-                    log.error("Match: {} letöltése sikertelen", newMatchIdList.get(i), e);
-                    Thread.currentThread().interrupt();
-                    return;
-                } catch (ExecutionException e) {
-                    log.warn("Match: {} letöltése sikertelen", newMatchIdList.get(i), e);
-                }
-            }
-
-            claimed.setLastCrawledAt(OffsetDateTime.now());
-            claimed.setStatus(CrawlStatus.DONE);
-            claimed.setPriority(0);
-            claimed.setRetryCounter(0);
-            crawlJobRepository.save(claimed);
         }
     }
 
@@ -164,7 +183,11 @@ public class CrawlWorker {
         List<String> donePuuid = new ArrayList<>();
         List<Future<Set<LeagueEntryDto>>> leagueEntryFuture = new ArrayList<>();
         for (String puuid : players) {
-            leagueEntryFuture.add(rankExecutorService.submit(() -> riotApiClient.getLeagueByPuuid(puuid)));
+            Optional<Player> player = playerRepository.findByPuuid(puuid);
+            if (player.isEmpty()) {
+                return;
+            }
+            leagueEntryFuture.add(rankExecutorService.submit(() -> riotApiClient.getLeagueByPuuid(puuid, player.get().getPlatform())));
         }
         for (int i = 0; i < leagueEntryFuture.size(); i++) {
             try {

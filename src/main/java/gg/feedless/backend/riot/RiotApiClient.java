@@ -4,6 +4,7 @@ import gg.feedless.backend.riot.dto.account.AccountDto;
 import gg.feedless.backend.riot.dto.league.LeagueEntryDto;
 import gg.feedless.backend.riot.dto.match.MatchDto;
 import gg.feedless.backend.riot.dto.summoner.SummonerDto;
+import gg.feedless.backend.stats.RegionType;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpStatus;
@@ -11,9 +12,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClient;
 
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 
 @Component
 public class RiotApiClient {
@@ -64,17 +63,30 @@ public class RiotApiClient {
         return europeApi.get().uri("/lol/match/v5/matches/{matchId}", matchId).retrieve().body(MatchDto.class);
     }
 
-    public SummonerDto getSummonerByPuuid(String region, String puuid) {
-        if (region.equals("eune")) {
-            return eun1Api.get().uri("/lol/summoner/v4/summoners/by-puuid/{puuid}", puuid).retrieve().body(SummonerDto.class);
-        } else {
-            return euw1Api.get().uri("/lol/summoner/v4/summoners/by-puuid/{puuid}", puuid).retrieve().body(SummonerDto.class);
+    public Optional<SummonerDto> getSummonerByPuuid(String region, String puuid) {
+        try {
+            if (Objects.equals(region, RegionType.EUNE.getPlatform())) {
+                return Optional.ofNullable(eun1Api.get().uri("/lol/summoner/v4/summoners/by-puuid/{puuid}", puuid).retrieve().body(SummonerDto.class));
+            } else if (Objects.equals(region, RegionType.EUW.getPlatform())) {
+                return Optional.ofNullable(euw1Api.get().uri("/lol/summoner/v4/summoners/by-puuid/{puuid}", puuid).retrieve().body(SummonerDto.class));
+            }
+        } catch (HttpClientErrorException error) {
+            if (error.getStatusCode().equals(HttpStatus.NOT_FOUND)) {
+                return Optional.empty();
+            } else {
+                throw error;
+            }
         }
-
+        return Optional.empty();
     }
 
-    public Set<LeagueEntryDto> getLeagueByPuuid(String puuid) {
+    public Set<LeagueEntryDto> getLeagueByPuuid(String puuid, String region) {
         ParameterizedTypeReference<Set<LeagueEntryDto>> typeRef = new ParameterizedTypeReference<>() {};
-        return eun1Api.get().uri("/lol/league/v4/entries/by-puuid/{puuid}", puuid).retrieve().body(typeRef);
+        if (Objects.equals(region, RegionType.EUNE.getPlatform())) {
+            return eun1Api.get().uri("/lol/league/v4/entries/by-puuid/{puuid}", puuid).retrieve().body(typeRef);
+        } else if (Objects.equals(region, RegionType.EUW.getPlatform())) {
+            return euw1Api.get().uri("/lol/league/v4/entries/by-puuid/{puuid}", puuid).retrieve().body(typeRef);
+        }
+        return new HashSet<>();
     }
 }
