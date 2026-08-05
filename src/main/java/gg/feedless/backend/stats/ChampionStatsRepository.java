@@ -164,7 +164,9 @@ public interface ChampionStatsRepository extends JpaRepository<ChampionStats, Lo
             WHEN f.tier_rank < 0.85 THEN 'C'
             ELSE 'D'
         END AS "tier",
-        (s.rank_position - f.today_rank)::int AS "trend"
+        (s.rank_position - f.today_rank)::int AS "trend",
+        f.today_rank::int AS "roleRank",
+        f.role_pool::int AS "rolePool"
     FROM filtered f
     CROSS JOIN ban_total bt
     LEFT JOIN ban b ON b.champion_id = f.champion_id

@@ -29,6 +29,21 @@ public class RuneStats {
     @Column(name = "keystone_id", nullable = false)
     private int keystoneId;
 
+    @Column(name = "primary_perk_2", nullable = false)
+    private int primaryPerk2;
+
+    @Column(name = "primary_perk_3", nullable = false)
+    private int primaryPerk3;
+
+    @Column(name = "primary_perk_4", nullable = false)
+    private int primaryPerk4;
+
+    @Column(name = "sub_perk_1", nullable = false)
+    private int subPerk1;
+
+    @Column(name = "sub_perk_2", nullable = false)
+    private int subPerk2;
+
     @Column(name = "games", nullable = false)
     private int games;
 
@@ -67,6 +82,26 @@ public class RuneStats {
 
     public int getKeystoneId() {
         return keystoneId;
+    }
+
+    public int getPrimaryPerk2() {
+        return primaryPerk2;
+    }
+
+    public int getPrimaryPerk3() {
+        return primaryPerk3;
+    }
+
+    public int getPrimaryPerk4() {
+        return primaryPerk4;
+    }
+
+    public int getSubPerk1() {
+        return subPerk1;
+    }
+
+    public int getSubPerk2() {
+        return subPerk2;
     }
 
     public int getGames() {

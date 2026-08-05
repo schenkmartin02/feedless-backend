@@ -39,3 +39,8 @@ crawler:
     interval-ms: 60000
     ttl-days: 2
     batch-size: 8
+
+stats:
+  aggregation:
+    interval-ms: 21600000     # 6 óra
+    initial-delay-ms: 300000  # 5 perc indulás után

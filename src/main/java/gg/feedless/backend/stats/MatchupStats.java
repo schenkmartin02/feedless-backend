@@ -26,6 +26,9 @@ public class MatchupStats {
     @Column(name = "opponent_champion_id", nullable = false)
     private int opponentChampionId;
 
+    @Column(name = "rank_tier", nullable = false)
+    private String rankTier;
+
     @Column(name = "games", nullable = false)
     private int games;
 
@@ -60,6 +63,10 @@ public class MatchupStats {
 
     public int getOpponentChampionId() {
         return opponentChampionId;
+    }
+
+    public String getRankTier() {
+        return rankTier;
     }
 
     public int getGames() {

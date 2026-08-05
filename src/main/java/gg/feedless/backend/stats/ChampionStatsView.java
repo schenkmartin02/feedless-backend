@@ -15,4 +15,6 @@ public interface ChampionStatsView {
     String getTier();
     Integer getTrend();
     Double getBanRate();
+    Integer getRoleRank();
+    Integer getRolePool();
 }

@@ -30,7 +30,7 @@ public class StatsAggregator {
         this.championBanStatsRepository = championBanStatsRepository;
     }
 
-    @Scheduled(fixedDelay = 3600_000)
+    @Scheduled(fixedDelayString = "${stats.aggregation.interval-ms}", initialDelayString = "${stats.aggregation.initial-delay-ms}")
     public void recomputeChampionStats(){
         int affectedRows = championStatsRepository.recomputeChampionStats();
         if (affectedRows > 0) {
@@ -40,7 +40,7 @@ public class StatsAggregator {
         }
     }
 
-    @Scheduled(fixedDelay = 3600_000)
+    @Scheduled(fixedDelayString = "${stats.aggregation.interval-ms}", initialDelayString = "${stats.aggregation.initial-delay-ms}")
     public void recomputeRuneStats(){
         int affectedRows = runeStatsRepository.recomputeRuneStats();
         if (affectedRows > 0) {
@@ -50,7 +50,7 @@ public class StatsAggregator {
         }
     }
 
-    @Scheduled(fixedDelay = 3600_000)
+    @Scheduled(fixedDelayString = "${stats.aggregation.interval-ms}", initialDelayString = "${stats.aggregation.initial-delay-ms}")
     public void recomputeItemStats(){
         int affectedRows = itemStatsRepository.recomputeItemStats();
         if (affectedRows > 0) {
@@ -60,7 +60,7 @@ public class StatsAggregator {
         }
     }
 
-    @Scheduled(fixedDelay = 3600_000)
+    @Scheduled(fixedDelayString = "${stats.aggregation.interval-ms}", initialDelayString = "${stats.aggregation.initial-delay-ms}")
     public void recomputeMatchupStats(){
         int affectedRows = matchupStatsRepository.recomputeMatchupStats();
         if (affectedRows > 0) {
@@ -70,7 +70,7 @@ public class StatsAggregator {
         }
     }
 
-    @Scheduled(fixedDelay = 3600_000)
+    @Scheduled(fixedDelayString = "${stats.aggregation.interval-ms}", initialDelayString = "${stats.aggregation.initial-delay-ms}")
     public void recomputeChampionBanStats(){
         int affectedRows = championBanStatsRepository.recomputeChampionBanStats();
         if (affectedRows > 0) {

@@ -1,15 +1,11 @@
 package gg.feedless.backend.api.championstats;
 
-import gg.feedless.backend.stats.BracketType;
-import gg.feedless.backend.stats.ChampionStatsService;
-import gg.feedless.backend.stats.QueueType;
-import gg.feedless.backend.stats.RegionType;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import gg.feedless.backend.stats.*;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/champions")
@@ -28,5 +24,11 @@ public class ChampionStatsController {
     @GetMapping("/featured")
     public List<FeaturedChampionResponse> getFeaturedChampionStats(@RequestParam QueueType queue, @RequestParam BracketType bracket, @RequestParam RegionType region) {
         return championStatsService.getFeaturedChampions(queue, bracket, region, null, null);
+    }
+    
+    @GetMapping("/{key}")
+    public ResponseEntity<ChampionDetailResponse> getChampionDetail(@PathVariable String key, @RequestParam QueueType queue, @RequestParam BracketType bracket, @RequestParam RegionType region, @RequestParam(required = false) RoleType role) {
+        Optional<ChampionDetailResponse> result = championStatsService.getChampionDetail(key, queue, bracket, region, role, null, null);
+        return result.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
     }
 }

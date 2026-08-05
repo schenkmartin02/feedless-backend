@@ -20,6 +20,7 @@ public class ChampionCatalog {
     private final RestClient client = RestClient.create(BASE_URL);
 
     private Map<Integer, String> championKeys = new ConcurrentHashMap<>();
+    private Map<String, Integer> championNames = new ConcurrentHashMap<>();
 
     @Scheduled(fixedDelay = 86_400_000)
     public void reload() {
@@ -53,6 +54,12 @@ public class ChampionCatalog {
                             dto -> Integer.parseInt(dto.key()),
                             ChampionDDragon::id
                     ));
+
+            this.championNames = championData.data().values().stream()
+                    .collect(Collectors.toMap(
+                            ChampionDDragon::id, dto -> Integer.parseInt(dto.key())
+                    ));
+
             log.info("Successfully loaded {} champions from DDragon", championKeys.size());
 
         } catch (Exception e) {
@@ -66,5 +73,9 @@ public class ChampionCatalog {
             log.warn("Unknown champion id: {}", championId);
         }
         return key;
+    }
+
+    public Integer getChampionId(String championName) {
+        return championNames.get(championName);
     }
 }
