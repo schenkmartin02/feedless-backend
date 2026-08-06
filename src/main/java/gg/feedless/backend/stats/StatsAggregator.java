@@ -32,7 +32,7 @@ public class StatsAggregator {
         this.championBanSnapshotRepository = championBanSnapshotRepository;
     }
 
-    @Scheduled(fixedDelayString = "${stats.aggregation.interval-ms}", initialDelayString = "${stats.aggregation.initial-delay-ms}")
+    @Scheduled(fixedDelayString = "${stats.aggregation.interval-ms}", initialDelayString = "${stats.aggregation.delay.champion-ms}")
     public void recomputeChampionStats(){
         int affectedRows = championStatsRepository.recomputeChampionStats();
         if (affectedRows > 0) {
@@ -42,7 +42,7 @@ public class StatsAggregator {
         }
     }
 
-    @Scheduled(fixedDelayString = "${stats.aggregation.interval-ms}", initialDelayString = "${stats.aggregation.initial-delay-ms}")
+    @Scheduled(fixedDelayString = "${stats.aggregation.interval-ms}", initialDelayString = "${stats.aggregation.delay.rune-ms}")
     public void recomputeRuneStats(){
         int affectedRows = runeStatsRepository.recomputeRuneStats();
         if (affectedRows > 0) {
@@ -52,7 +52,7 @@ public class StatsAggregator {
         }
     }
 
-    @Scheduled(fixedDelayString = "${stats.aggregation.interval-ms}", initialDelayString = "${stats.aggregation.initial-delay-ms}")
+    @Scheduled(fixedDelayString = "${stats.aggregation.interval-ms}", initialDelayString = "${stats.aggregation.delay.item-ms}")
     public void recomputeItemStats(){
         int affectedRows = itemStatsRepository.recomputeItemStats();
         if (affectedRows > 0) {
@@ -62,7 +62,7 @@ public class StatsAggregator {
         }
     }
 
-    @Scheduled(fixedDelayString = "${stats.aggregation.interval-ms}", initialDelayString = "${stats.aggregation.initial-delay-ms}")
+    @Scheduled(fixedDelayString = "${stats.aggregation.interval-ms}", initialDelayString = "${stats.aggregation.delay.matchup-ms}")
     public void recomputeMatchupStats(){
         int affectedRows = matchupStatsRepository.recomputeMatchupStats();
         if (affectedRows > 0) {
@@ -72,7 +72,7 @@ public class StatsAggregator {
         }
     }
 
-    @Scheduled(fixedDelayString = "${stats.aggregation.interval-ms}", initialDelayString = "${stats.aggregation.initial-delay-ms}")
+    @Scheduled(fixedDelayString = "${stats.aggregation.interval-ms}", initialDelayString = "${stats.aggregation.delay.ban-ms}")
     public void recomputeChampionBanStats(){
         int affectedRows = championBanStatsRepository.recomputeChampionBanStats();
         if (affectedRows > 0) {
@@ -83,7 +83,7 @@ public class StatsAggregator {
     }
 
     @Transactional
-    @Scheduled(fixedDelay = 86_400_000)
+    @Scheduled(fixedDelay = 86_400_000, initialDelayString = "${stats.aggregation.delay.champion-snapshot-ms}")
     public void insertOrDeleteSnapshot() {
         Optional<String> lastPatch = matchRepository.getLastPatch();
         if (lastPatch.isEmpty()) {
@@ -100,7 +100,7 @@ public class StatsAggregator {
     }
 
     @Transactional
-    @Scheduled(fixedDelay = 86_400_000)
+    @Scheduled(fixedDelay = 86_400_000, initialDelayString = "${stats.aggregation.delay.ban-snapshot-ms}")
     public void insertOrDeleteSnapshotBan() {
         Optional<String> lastPatch = matchRepository.getLastPatch();
         if (lastPatch.isEmpty()) {
