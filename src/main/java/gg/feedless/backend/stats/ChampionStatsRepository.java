@@ -46,6 +46,8 @@ public interface ChampionStatsRepository extends JpaRepository<ChampionStats, Lo
                    LEFT JOIN player_ranks pr ON pr.player_id = p.player_id
                                             AND pr.queue_type = 'RANKED_SOLO_5x5'
                    WHERE m.game_duration >= 300
+                    AND m.aggregated_at IS NULL
+                    AND m.id <= :upperBound
                    GROUP BY
                        m.platform,
                        m.patch,
@@ -56,19 +58,19 @@ public interface ChampionStatsRepository extends JpaRepository<ChampionStats, Lo
             
                    ON CONFLICT (platform, patch, queue_id, champion_id, team_position, rank_tier)
                    DO UPDATE SET
-                       games = EXCLUDED.games,
-                       wins = EXCLUDED.wins,
-                       sum_kills = EXCLUDED.sum_kills,
-                       sum_deaths = EXCLUDED.sum_deaths,
-                       sum_assists = EXCLUDED.sum_assists,
-                       sum_gold_earned = EXCLUDED.sum_gold_earned,
-                       sum_cs = EXCLUDED.sum_cs,
-                       sum_damage_to_champions = EXCLUDED.sum_damage_to_champions,
-                       sum_vision_score = EXCLUDED.sum_vision_score,
-                       sum_duration = EXCLUDED.sum_duration,
+                       games = champion_stats.games + EXCLUDED.games,
+                       wins = champion_stats.wins + EXCLUDED.wins,
+                       sum_kills = champion_stats.sum_kills + EXCLUDED.sum_kills,
+                       sum_deaths = champion_stats.sum_deaths + EXCLUDED.sum_deaths,
+                       sum_assists = champion_stats.sum_assists + EXCLUDED.sum_assists,
+                       sum_gold_earned = champion_stats.sum_gold_earned + EXCLUDED.sum_gold_earned,
+                       sum_cs = champion_stats.sum_cs + EXCLUDED.sum_cs,
+                       sum_damage_to_champions = champion_stats.sum_damage_to_champions + EXCLUDED.sum_damage_to_champions,
+                       sum_vision_score = champion_stats.sum_vision_score + EXCLUDED.sum_vision_score,
+                       sum_duration = champion_stats.sum_duration + EXCLUDED.sum_duration,
                        updated_at = NOW()
             """, nativeQuery = true)
-    int recomputeChampionStats();
+    int recomputeChampionStats(@Param("upperBound") long upperBound);
 
     @Query(value = """
     WITH aggregated AS (

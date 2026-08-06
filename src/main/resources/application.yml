@@ -43,11 +43,11 @@ crawler:
 stats:
   aggregation:
     interval-ms: 21600000        # 6 óra
+    batch:
+      size: 50000
+      interval-ms: 300000
     delay:
-      champion-ms:  300000       #  5 perc
       rune-ms:      900000       # 15 perc
-      item-ms:     1500000       # 25 perc
-      matchup-ms:  2100000       # 35 perc
-      ban-ms:      2700000       # 45 perc
+      ban-ms:      1500000       # 45 perc
       champion-snapshot-ms: 600000
-      ban-snapshot-ms: 3000000
+      ban-snapshot-ms: 1800000

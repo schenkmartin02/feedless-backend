@@ -36,7 +36,9 @@ public interface MatchupStatsRepository extends JpaRepository<MatchupStats, Long
     JOIN matches m ON m.id = p1.match_id
     LEFT JOIN player_ranks pr ON pr.player_id = p1.player_id AND pr.queue_type = 'RANKED_SOLO_5x5'
     WHERE m.game_duration >= 300
-      AND p1.team_position <> ''
+        AND p1.team_position <> ''
+        AND m.aggregated_at IS NULL
+        AND m.id <= :upperBound
     GROUP BY
         m.platform,
         m.patch,
@@ -47,11 +49,11 @@ public interface MatchupStatsRepository extends JpaRepository<MatchupStats, Long
         COALESCE(pr.tier, 'UNKNOWN')
     ON CONFLICT (platform, patch, queue_id, champion_id, team_position, opponent_champion_id, rank_tier)
     DO UPDATE SET
-        games = EXCLUDED.games,
-        wins = EXCLUDED.wins,
+        games = matchup_stats.games + EXCLUDED.games,
+        wins = matchup_stats.wins + EXCLUDED.wins,
         updated_at = NOW()
     """, nativeQuery = true)
-    int recomputeMatchupStats();
+    int recomputeMatchupStats(@Param("upperBound") long upperBound);
 
     @Query(value = """
 

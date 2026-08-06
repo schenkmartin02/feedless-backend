@@ -3,6 +3,7 @@ package gg.feedless.backend.stats;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.transaction.annotation.Transactional;
 
 public interface ItemStatsRepository extends JpaRepository<ItemStats, Long> {
@@ -30,6 +31,8 @@ public interface ItemStatsRepository extends JpaRepository<ItemStats, Long> {
                                    (p.item3), (p.item4), (p.item5)) AS it(item_id)
         WHERE m.game_duration >= 300
           AND it.item_id <> 0
+          AND m.aggregated_at IS NULL
+          AND m.id <= :upperBound
         GROUP BY
             m.platform,
             m.patch,
@@ -39,9 +42,9 @@ public interface ItemStatsRepository extends JpaRepository<ItemStats, Long> {
             it.item_id
         ON CONFLICT (platform, patch, queue_id, champion_id, team_position, item_id)
         DO UPDATE SET
-            games = EXCLUDED.games,
-            wins = EXCLUDED.wins,
+            games = item_stats.games + EXCLUDED.games,
+            wins = item_stats.wins + EXCLUDED.wins,
             updated_at = NOW()
         """, nativeQuery = true)
-    int recomputeItemStats();
+    int recomputeItemStats(@Param("upperBound") long upperBound);
 }

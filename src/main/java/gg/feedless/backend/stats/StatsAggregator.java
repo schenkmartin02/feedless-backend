@@ -3,8 +3,10 @@ package gg.feedless.backend.stats;
 import gg.feedless.backend.match.MatchRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
@@ -22,7 +24,9 @@ public class StatsAggregator {
     private final ChampionBanStatsRepository championBanStatsRepository;
     private final ChampionBanSnapshotRepository championBanSnapshotRepository;
 
-    public StatsAggregator(ChampionStatsRepository championStatsRepository, RuneStatsRepository runeStatsRepository, ItemStatsRepository itemStatsRepository, MatchupStatsRepository matchupStatsRepository, MatchRepository matchRepository, ChampionBanStatsRepository championBanStatsRepository, ChampionBanSnapshotRepository championBanSnapshotRepository) {
+    private final int batchSize;
+
+    public StatsAggregator(ChampionStatsRepository championStatsRepository, RuneStatsRepository runeStatsRepository, ItemStatsRepository itemStatsRepository, MatchupStatsRepository matchupStatsRepository, MatchRepository matchRepository, ChampionBanStatsRepository championBanStatsRepository, ChampionBanSnapshotRepository championBanSnapshotRepository, @Value("${stats.aggregation.batch.size}") int batchSize) {
         this.championStatsRepository = championStatsRepository;
         this.runeStatsRepository = runeStatsRepository;
         this.itemStatsRepository = itemStatsRepository;
@@ -30,16 +34,7 @@ public class StatsAggregator {
         this.matchRepository = matchRepository;
         this.championBanStatsRepository = championBanStatsRepository;
         this.championBanSnapshotRepository = championBanSnapshotRepository;
-    }
-
-    @Scheduled(fixedDelayString = "${stats.aggregation.interval-ms}", initialDelayString = "${stats.aggregation.delay.champion-ms}")
-    public void recomputeChampionStats(){
-        int affectedRows = championStatsRepository.recomputeChampionStats();
-        if (affectedRows > 0) {
-            log.info("Recomputed {} champion stat rows", affectedRows);
-        } else {
-            log.warn("Recomputed {} champion stat rows", affectedRows);
-        }
+        this.batchSize = batchSize;
     }
 
     @Scheduled(fixedDelayString = "${stats.aggregation.interval-ms}", initialDelayString = "${stats.aggregation.delay.rune-ms}")
@@ -49,26 +44,6 @@ public class StatsAggregator {
             log.info("Recomputed {} rune stat rows", affectedRows);
         } else {
             log.warn("Recomputed {} rune stat rows", affectedRows);
-        }
-    }
-
-    @Scheduled(fixedDelayString = "${stats.aggregation.interval-ms}", initialDelayString = "${stats.aggregation.delay.item-ms}")
-    public void recomputeItemStats(){
-        int affectedRows = itemStatsRepository.recomputeItemStats();
-        if (affectedRows > 0) {
-            log.info("Recomputed {} item stat rows", affectedRows);
-        } else {
-            log.warn("Recomputed {} item stat rows", affectedRows);
-        }
-    }
-
-    @Scheduled(fixedDelayString = "${stats.aggregation.interval-ms}", initialDelayString = "${stats.aggregation.delay.matchup-ms}")
-    public void recomputeMatchupStats(){
-        int affectedRows = matchupStatsRepository.recomputeMatchupStats();
-        if (affectedRows > 0) {
-            log.info("Recomputed {} matchup stat rows", affectedRows);
-        } else {
-            log.warn("Recomputed {} matchup stat rows", affectedRows);
         }
     }
 
@@ -114,5 +89,22 @@ public class StatsAggregator {
         int deletedResult = championBanSnapshotRepository.deleteBanSnapshot(LocalDate.now().minusDays(30));
         log.info("Snapshotted {} ban rows", result);
         log.info("Deleted {} old ban snapshot rows", deletedResult);
+    }
+
+    @Transactional(isolation = Isolation.REPEATABLE_READ)
+    @Scheduled(fixedDelayString = "${stats.aggregation.batch.interval-ms}")
+    public void aggregateNextBatch() {
+        Optional<Long> upperBound = matchRepository.getUpperBound(batchSize);
+        if (upperBound.isEmpty()) {
+            return;
+        }
+        long upperBoundGet = upperBound.get();
+        int championStats = championStatsRepository.recomputeChampionStats(upperBoundGet);
+        int itemStats = itemStatsRepository.recomputeItemStats(upperBoundGet);
+        int matchupStats = matchupStatsRepository.recomputeMatchupStats(upperBoundGet);
+
+        int result = matchRepository.setAggregatedAt(upperBoundGet);
+
+        log.info("Aggregated {} matches up to id {}: {} champion, {} item, {} matchup rows", result, upperBoundGet, championStats, itemStats, matchupStats);
     }
 }
