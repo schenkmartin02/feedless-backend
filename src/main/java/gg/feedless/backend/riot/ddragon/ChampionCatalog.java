@@ -1,5 +1,6 @@
 package gg.feedless.backend.riot.ddragon;
 
+import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -7,7 +8,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 @Service
@@ -19,10 +19,11 @@ public class ChampionCatalog {
 
     private final RestClient client = RestClient.create(BASE_URL);
 
-    private Map<Integer, String> championKeys = new ConcurrentHashMap<>();
-    private Map<String, Integer> championNames = new ConcurrentHashMap<>();
+    private volatile Map<Integer, String> championKeys = Map.of();
+    private volatile Map<String, Integer> championNames = Map.of();
 
-    @Scheduled(fixedDelay = 86_400_000)
+    @PostConstruct
+    @Scheduled(fixedDelay = 3_600_000, initialDelay = 3_600_000)
     public void reload() {
         log.info("Starting DDragon champion catalog reload...");
         try {
