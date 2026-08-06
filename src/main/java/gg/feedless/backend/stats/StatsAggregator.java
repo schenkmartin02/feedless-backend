@@ -23,10 +23,15 @@ public class StatsAggregator {
     private final MatchRepository matchRepository;
     private final ChampionBanStatsRepository championBanStatsRepository;
     private final ChampionBanSnapshotRepository championBanSnapshotRepository;
+    private final SiteStatsRepository siteStatsRepository;
 
     private final int batchSize;
 
-    public StatsAggregator(ChampionStatsRepository championStatsRepository, RuneStatsRepository runeStatsRepository, ItemStatsRepository itemStatsRepository, MatchupStatsRepository matchupStatsRepository, MatchRepository matchRepository, ChampionBanStatsRepository championBanStatsRepository, ChampionBanSnapshotRepository championBanSnapshotRepository, @Value("${stats.aggregation.batch.size}") int batchSize) {
+    public StatsAggregator(ChampionStatsRepository championStatsRepository, RuneStatsRepository runeStatsRepository,
+                           ItemStatsRepository itemStatsRepository, MatchupStatsRepository matchupStatsRepository,
+                           MatchRepository matchRepository, ChampionBanStatsRepository championBanStatsRepository,
+                           ChampionBanSnapshotRepository championBanSnapshotRepository, @Value("${stats.aggregation.batch.size}") int batchSize,
+                           SiteStatsRepository siteStatsRepository) {
         this.championStatsRepository = championStatsRepository;
         this.runeStatsRepository = runeStatsRepository;
         this.itemStatsRepository = itemStatsRepository;
@@ -35,6 +40,7 @@ public class StatsAggregator {
         this.championBanStatsRepository = championBanStatsRepository;
         this.championBanSnapshotRepository = championBanSnapshotRepository;
         this.batchSize = batchSize;
+        this.siteStatsRepository = siteStatsRepository;
     }
 
     @Scheduled(fixedDelayString = "${stats.aggregation.interval-ms}", initialDelayString = "${stats.aggregation.delay.rune-ms}")
@@ -106,5 +112,14 @@ public class StatsAggregator {
         int result = matchRepository.setAggregatedAt(upperBoundGet);
 
         log.info("Aggregated {} matches up to id {}: {} champion, {} item, {} matchup rows", result, upperBoundGet, championStats, itemStats, matchupStats);
+    }
+
+    @Transactional
+    @Scheduled(fixedDelay = 600_000)
+    public void refreshSiteStats() {
+        int result = siteStatsRepository.recomputeSiteStats();
+        if (result > 0) {
+            log.info("{} updated site stats", result);
+        }
     }
 }
