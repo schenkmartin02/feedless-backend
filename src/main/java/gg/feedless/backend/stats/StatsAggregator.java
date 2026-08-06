@@ -20,14 +20,16 @@ public class StatsAggregator {
     private final MatchupStatsRepository matchupStatsRepository;
     private final MatchRepository matchRepository;
     private final ChampionBanStatsRepository championBanStatsRepository;
+    private final ChampionBanSnapshotRepository championBanSnapshotRepository;
 
-    public StatsAggregator(ChampionStatsRepository championStatsRepository, RuneStatsRepository runeStatsRepository, ItemStatsRepository itemStatsRepository, MatchupStatsRepository matchupStatsRepository, MatchRepository matchRepository, ChampionBanStatsRepository championBanStatsRepository) {
+    public StatsAggregator(ChampionStatsRepository championStatsRepository, RuneStatsRepository runeStatsRepository, ItemStatsRepository itemStatsRepository, MatchupStatsRepository matchupStatsRepository, MatchRepository matchRepository, ChampionBanStatsRepository championBanStatsRepository, ChampionBanSnapshotRepository championBanSnapshotRepository) {
         this.championStatsRepository = championStatsRepository;
         this.runeStatsRepository = runeStatsRepository;
         this.itemStatsRepository = itemStatsRepository;
         this.matchupStatsRepository = matchupStatsRepository;
         this.matchRepository = matchRepository;
         this.championBanStatsRepository = championBanStatsRepository;
+        this.championBanSnapshotRepository = championBanSnapshotRepository;
     }
 
     @Scheduled(fixedDelayString = "${stats.aggregation.interval-ms}", initialDelayString = "${stats.aggregation.initial-delay-ms}")
@@ -95,5 +97,22 @@ public class StatsAggregator {
         int deletedResult = championStatsRepository.deleteOldSnapshot(LocalDate.now().minusDays(7));
         log.info("Snapshotted {} rank rows", result);
         log.info("Deleted {} old snapshot rows", deletedResult);
+    }
+
+    @Transactional
+    @Scheduled(fixedDelay = 86_400_000)
+    public void insertOrDeleteSnapshotBan() {
+        Optional<String> lastPatch = matchRepository.getLastPatch();
+        if (lastPatch.isEmpty()) {
+            log.warn("No match to snapshot");
+            return;
+        }
+        int result = 0;
+        for (BracketType bracket: BracketType.values()) {
+            result += championBanSnapshotRepository.insertNewBanSnapshot(lastPatch.get(), bracket.getTiers(), LocalDate.now(), bracket.name().toLowerCase());
+        }
+        int deletedResult = championBanSnapshotRepository.deleteBanSnapshot(LocalDate.now().minusDays(30));
+        log.info("Snapshotted {} ban rows", result);
+        log.info("Deleted {} old ban snapshot rows", deletedResult);
     }
 }

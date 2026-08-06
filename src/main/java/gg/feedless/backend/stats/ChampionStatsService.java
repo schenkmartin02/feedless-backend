@@ -17,6 +17,7 @@ public class ChampionStatsService {
     private final ChampionCatalog championCatalog;
     private final MatchupStatsRepository matchupStatsRepository;
     private final RuneStatsRepository runeStatsRepository;
+    private final ChampionBanSnapshotRepository championBanSnapshotRepository;
 
     public static final int DEFAULT_MIN_GAMES = 200;
 
@@ -24,12 +25,13 @@ public class ChampionStatsService {
 
     private static final int MIN_MATCHUP_GAMES = 100;
 
-    public ChampionStatsService(ChampionStatsRepository championStatsRepository, MatchRepository matchRepository, ChampionCatalog championCatalog, MatchupStatsRepository matchupStatsRepository, RuneStatsRepository runeStatsRepository) {
+    public ChampionStatsService(ChampionStatsRepository championStatsRepository, MatchRepository matchRepository, ChampionCatalog championCatalog, MatchupStatsRepository matchupStatsRepository, RuneStatsRepository runeStatsRepository, ChampionBanSnapshotRepository championBanSnapshotRepository) {
         this.championStatsRepository = championStatsRepository;
         this.matchRepository = matchRepository;
         this.championCatalog = championCatalog;
         this.matchupStatsRepository = matchupStatsRepository;
         this.runeStatsRepository = runeStatsRepository;
+        this.championBanSnapshotRepository = championBanSnapshotRepository;
     }
 
     public ChampionStatsListResponse getChampionStats(QueueType queue, BracketType bracket, RegionType region, String patch, Integer minGames) {
@@ -182,6 +184,13 @@ public class ChampionStatsService {
             runes = new RunesResponse(List.of(runeStatsView.getKeystoneId(), runeStatsView.getPrimaryPerk2(), runeStatsView.getPrimaryPerk3(), runeStatsView.getPrimaryPerk4()), List.of(runeStatsView.getSubPerk1(), runeStatsView.getSubPerk2()));
         }
 
-        return Optional.of(new ChampionDetailResponse(championStatsResponse, scope, patch, actualRole, availableRoles, actualStats.getRoleRank(), actualStats.getRolePool(), null, null, runes, strongAgainstResponse, weakAgainstResponse));
+        Optional<Double> banSnapshot = championBanSnapshotRepository.getPatchValue(region.getPlatform(), patch, queueId, bracket.name().toLowerCase(), championId);
+
+        Double banDelta = null;
+        if (banSnapshot.isPresent() && actualStats.getBanRate() != null) {
+            banDelta =(Math.round((actualStats.getBanRate() - banSnapshot.get())*10.0)/10.0);
+        }
+
+        return Optional.of(new ChampionDetailResponse(championStatsResponse, scope, patch, actualRole, availableRoles, actualStats.getRoleRank(), actualStats.getRolePool(), banDelta, null, runes, strongAgainstResponse, weakAgainstResponse));
     }
 }
