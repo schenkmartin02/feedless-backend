@@ -40,6 +40,11 @@ crawler:
     ttl-days: 2
     batch-size: 8
 
+retention:
+  match-days: 30
+  batch-size: 10000
+  interval-ms: 600000     # 10 perc
+
 stats:
   aggregation:
     interval-ms: 21600000        # 6 óra
