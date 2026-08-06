@@ -68,7 +68,7 @@ public interface MatchupStatsRepository extends JpaRepository<MatchupStats, Long
         AND rank_tier IN (:tiers)
     GROUP BY opponent_champion_id
     HAVING SUM(games) >= :minGames
-    ORDER BY "winRate" DESC
+    ORDER BY (SUM(wins) + 100.0) / (SUM(games) + 200.0) DESC
     """, nativeQuery = true)
     List<MatchupStatsView> getMatchupStats(@Param("platform") String platform, @Param("patch") String patch,
                                            @Param("queueId") int queueId, @Param("championId") int championId,
