@@ -2,8 +2,10 @@ package gg.feedless.backend.riot;
 
 import gg.feedless.backend.riot.dto.account.AccountDto;
 import gg.feedless.backend.riot.dto.league.LeagueEntryDto;
+import gg.feedless.backend.riot.dto.league.LeagueListDto;
 import gg.feedless.backend.riot.dto.match.MatchDto;
 import gg.feedless.backend.riot.dto.summoner.SummonerDto;
+import gg.feedless.backend.stats.QueueType;
 import gg.feedless.backend.stats.RegionType;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.core.ParameterizedTypeReference;
@@ -65,10 +67,9 @@ public class RiotApiClient {
 
     public Optional<SummonerDto> getSummonerByPuuid(String region, String puuid) {
         try {
-            if (Objects.equals(region, RegionType.EUNE.getPlatform())) {
-                return Optional.ofNullable(eun1Api.get().uri("/lol/summoner/v4/summoners/by-puuid/{puuid}", puuid).retrieve().body(SummonerDto.class));
-            } else if (Objects.equals(region, RegionType.EUW.getPlatform())) {
-                return Optional.ofNullable(euw1Api.get().uri("/lol/summoner/v4/summoners/by-puuid/{puuid}", puuid).retrieve().body(SummonerDto.class));
+            RestClient client = getRestClientByRegion(region);
+            if (client != null) {
+                return Optional.ofNullable(client.get().uri("/lol/summoner/v4/summoners/by-puuid/{puuid}", puuid).retrieve().body(SummonerDto.class));
             }
         } catch (HttpClientErrorException error) {
             if (error.getStatusCode().equals(HttpStatus.NOT_FOUND)) {
@@ -82,11 +83,30 @@ public class RiotApiClient {
 
     public Set<LeagueEntryDto> getLeagueByPuuid(String puuid, String region) {
         ParameterizedTypeReference<Set<LeagueEntryDto>> typeRef = new ParameterizedTypeReference<>() {};
-        if (Objects.equals(region, RegionType.EUNE.getPlatform())) {
-            return eun1Api.get().uri("/lol/league/v4/entries/by-puuid/{puuid}", puuid).retrieve().body(typeRef);
-        } else if (Objects.equals(region, RegionType.EUW.getPlatform())) {
-            return euw1Api.get().uri("/lol/league/v4/entries/by-puuid/{puuid}", puuid).retrieve().body(typeRef);
+        RestClient client = getRestClientByRegion(region);
+        if (client != null) {
+            return client.get().uri("/lol/league/v4/entries/by-puuid/{puuid}", puuid).retrieve().body(typeRef);
         }
         return new HashSet<>();
+    }
+
+    public Optional<LeagueListDto> getLeaderboardLeagues(QueueType queue, String region, ApexTier tier) {
+        RestClient client = getRestClientByRegion(region);
+        if (queue.getLeagueQueue() == null) {
+            return Optional.empty();
+        }
+        if (client != null) {
+            return Optional.ofNullable(client.get().uri("/lol/league/v4/{tier}/by-queue/{queue}", tier.getLeagues(), queue.getLeagueQueue()).retrieve().body(LeagueListDto.class));
+        }
+        return Optional.empty();
+    }
+
+    private RestClient getRestClientByRegion(String region) {
+        if (Objects.equals(region, RegionType.EUNE.getPlatform())) {
+            return eun1Api;
+        } else if (Objects.equals(region, RegionType.EUW.getPlatform())) {
+            return euw1Api;
+        }
+        return null;
     }
 }

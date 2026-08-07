@@ -32,7 +32,16 @@ public interface PlayerRankRepository extends JpaRepository<PlayerRank, Long> {
           wins          = EXCLUDED.wins,
           losses        = EXCLUDED.losses
     """, nativeQuery = true)
-    int upsertPlayerRank(@Param("puuid") String puuid, @Param("queueType") String queueType,
-                                     @Param("tier") String tier, @Param("division") String division,
-                                     @Param("leaguePoints") int leaguePoints, @Param("wins") int wins, @Param("losses") int losses);
+    void upsertPlayerRank(@Param("puuid") String puuid, @Param("queueType") String queueType, @Param("tier") String tier,
+                         @Param("division") String division, @Param("leaguePoints") int leaguePoints,
+                         @Param("wins") int wins, @Param("losses") int losses);
+
+    @Query(value = """
+    SELECT count(*)                                                              \s
+    FROM player_ranks pr                                                         \s
+    JOIN players p ON p.id = pr.player_id                                        \s
+    WHERE pr.queue_type = :queueType                                             \s
+      AND p.platform = :platform
+    """, nativeQuery = true)
+    long getRankedPlayerCount(@Param("queueType") String queue, @Param("platform") String platform);
 }
