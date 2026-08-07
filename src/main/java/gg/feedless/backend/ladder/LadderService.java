@@ -14,9 +14,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -76,6 +78,14 @@ public class LadderService {
                 }
             }
         }
+    }
+
+    @Transactional
+    @Scheduled(fixedDelay = 86_400_000, initialDelay = 60_000)
+    public void updateLadderSnapshot() {
+        int insert = rankLeaderboardRepository.insertLadderSnapshot(LocalDate.now());
+        int delete = rankLeaderboardRepository.deleteOldLadderSnapshot(LocalDate.now().minusDays(7));
+        log.info("LadderSnapshot updated insert: {} and delete: {}", insert, delete);
     }
 
     public LadderResponse getLadder(QueueType queue, RegionType region, int page, String tier, String q) {

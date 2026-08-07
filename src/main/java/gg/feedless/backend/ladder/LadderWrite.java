@@ -3,6 +3,7 @@ package gg.feedless.backend.ladder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @Service
@@ -23,5 +24,6 @@ public class LadderWrite {
     public void enrich(String platform, String queueType, int queueId, int maxPosition) {
         rankLeaderboardRepository.updateRankLeaderboardKda(platform, queueType, maxPosition, queueId);
         rankLeaderboardRepository.updateRankLeaderboardTopChamps(platform, queueType, maxPosition, queueId);
+        rankLeaderboardRepository.recomputeDelta(LocalDate.now().minusDays(1), platform, queueType, maxPosition);
     }
 }

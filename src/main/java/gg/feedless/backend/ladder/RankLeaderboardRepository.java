@@ -4,7 +4,9 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.util.List;
 
 public interface RankLeaderboardRepository extends JpaRepository<RankLeaderboard, Long> {
@@ -129,4 +131,38 @@ public interface RankLeaderboardRepository extends JpaRepository<RankLeaderboard
     """, nativeQuery = true)
     void updateRankLeaderboardTopChamps(@Param("platform") String platform, @Param("queueType") String queueType,
                                        @Param("maxPosition") int maxPosition, @Param("queueId") int queueId);
+
+    @Transactional
+    @Modifying
+    @Query(value = """
+    INSERT INTO ladder_snapshot (snapshot_date, platform, queue_type, puuid,     \s
+    rank_position)                                                               \s
+    SELECT :snapshotDate, platform, queue_type, puuid, rank_position             \s
+    FROM rank_leaderboard                                                        \s
+    ON CONFLICT (snapshot_date, platform, queue_type, puuid) DO NOTHING
+    """, nativeQuery = true)
+    int insertLadderSnapshot(@Param("snapshotDate") LocalDate snapshotDate);
+
+    @Transactional
+    @Modifying
+    @Query(value = """
+    DELETE FROM ladder_snapshot WHERE snapshot_date < :cutoff
+    """, nativeQuery = true)
+    int deleteOldLadderSnapshot(@Param("cutoff") LocalDate cutoff);
+
+    @Modifying
+    @Query(value = """
+    UPDATE rank_leaderboard l                                                    \s
+    SET delta = s.rank_position - l.rank_position                                \s
+    FROM ladder_snapshot s                                                       \s
+    WHERE s.snapshot_date = :yesterday                                           \s
+      AND s.platform      = l.platform                                           \s
+      AND s.queue_type    = l.queue_type                                         \s
+      AND s.puuid         = l.puuid                                              \s
+      AND l.platform      = :platform                                            \s
+      AND l.queue_type    = :queueType                                           \s
+      AND l.rank_position <= :maxPosition
+    """, nativeQuery = true)
+    void recomputeDelta(@Param("yesterday") LocalDate yesterday, @Param("platform") String platform,
+                        @Param("queueType") String queueType, @Param("maxPosition") int maxPosition);
 }
