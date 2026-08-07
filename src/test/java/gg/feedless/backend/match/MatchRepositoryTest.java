@@ -27,9 +27,13 @@ class MatchRepositoryTest {
     @Autowired
     MatchRepository matchRepository;
 
+    private Match match(String matchId) {
+        return new Match(matchId, "67.69.67", 420, OffsetDateTime.now(), 69, List.of());
+    }
+
     @Test
     void findByMatchId() {
-        Match testMatch = new Match("EUN1_696969", "67.69.67", 420, OffsetDateTime.now(), 69);
+        Match testMatch = match("EUN1_696969");
         matchRepository.save(testMatch);
 
         Optional<Match> matchResult = matchRepository.findByMatchId("EUN1_696969");
@@ -38,10 +42,10 @@ class MatchRepositoryTest {
 
     @Test
     void findByMatchIdIn() {
-        Match testMatch = new Match("EUN1_696969", "67.69.67", 420, OffsetDateTime.now(), 69);
+        Match testMatch = match("EUN1_696969");
         matchRepository.save(testMatch);
 
-        Match testMatch1 = new Match("EUN1_6969692", "67.69.67", 420, OffsetDateTime.now(), 69);
+        Match testMatch1 = match("EUN1_6969692");
         matchRepository.save(testMatch1);
 
         Collection<String> ids = new ArrayList<>();
@@ -55,7 +59,7 @@ class MatchRepositoryTest {
 
     @Test
     void existsByMatchId() {
-        Match testMatch = new Match("EUN1_696969", "67.69.67", 420, OffsetDateTime.now(), 69);
+        Match testMatch = match("EUN1_696969");
         matchRepository.save(testMatch);
 
         assertTrue(matchRepository.existsByMatchId("EUN1_696969"));

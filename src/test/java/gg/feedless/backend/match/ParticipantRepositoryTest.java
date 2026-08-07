@@ -38,6 +38,10 @@ class ParticipantRepositoryTest {
     @Autowired
     ParticipantRepository participantRepository;
 
+    private Match match(String matchId) {
+        return new Match(matchId, "67.69.67", 420, OffsetDateTime.now(), 69, List.of());
+    }
+
     @Test
     void findAllByMatchId() {
         Player testPlayer = new Player("test");
@@ -46,7 +50,7 @@ class ParticipantRepositoryTest {
         Player testPlayer2 = new Player("test2");
         playerRepository.save(testPlayer2);
 
-        Match testMatch = new Match("EUN1_696969", "67.69.67", 420, OffsetDateTime.now(), 69);
+        Match testMatch = match("EUN1_696969");
         matchRepository.save(testMatch);
 
         Participant testParticipant = Participant.from(testMatch.getId(), testPlayer.getId(),
@@ -57,7 +61,7 @@ class ParticipantRepositoryTest {
                 participantDto(69, "BOTTOM", 10, 0, 5, true));
         participantRepository.save(testParticipant2);
 
-        Match testMatch2 = new Match("EUN1_6969692", "67.69.67", 420, OffsetDateTime.now(), 69);
+        Match testMatch2 = match("EUN1_6969692");
         matchRepository.save(testMatch2);
 
         Participant testParticipant3 = Participant.from(testMatch2.getId(), testPlayer.getId(),
@@ -75,7 +79,7 @@ class ParticipantRepositoryTest {
         Player testPlayer = new Player("test");
         playerRepository.save(testPlayer);
 
-        Match testMatch = new Match("EUN1_696969", "67.69.67", 420, OffsetDateTime.now(), 69);
+        Match testMatch = match("EUN1_696969");
         matchRepository.save(testMatch);
 
         Participant testParticipant = Participant.from(testMatch.getId(), testPlayer.getId(),
