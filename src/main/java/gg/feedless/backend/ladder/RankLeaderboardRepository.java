@@ -4,7 +4,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -132,7 +131,6 @@ public interface RankLeaderboardRepository extends JpaRepository<RankLeaderboard
     void updateRankLeaderboardTopChamps(@Param("platform") String platform, @Param("queueType") String queueType,
                                        @Param("maxPosition") int maxPosition, @Param("queueId") int queueId);
 
-    @Transactional
     @Modifying
     @Query(value = """
     INSERT INTO ladder_snapshot (snapshot_date, platform, queue_type, puuid,     \s
@@ -143,7 +141,6 @@ public interface RankLeaderboardRepository extends JpaRepository<RankLeaderboard
     """, nativeQuery = true)
     int insertLadderSnapshot(@Param("snapshotDate") LocalDate snapshotDate);
 
-    @Transactional
     @Modifying
     @Query(value = """
     DELETE FROM ladder_snapshot WHERE snapshot_date < :cutoff
