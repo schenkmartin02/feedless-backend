@@ -27,7 +27,8 @@ public interface RankLeaderboardRepository extends JpaRepository<RankLeaderboard
         l.wins              AS "wins",                                           \s
         l.losses            AS "losses",                                         \s
         l.kda               AS "kda",                                            \s
-        l.delta             AS "delta"                                           \s
+        l.delta             AS "delta",                                          \s
+        l.top_champion_ids  AS "topChampionIds"
     FROM rank_leaderboard l                                                      \s
     LEFT JOIN players p ON p.puuid = l.puuid                                     \s
     WHERE l.platform   = :platform                                               \s
@@ -72,4 +73,60 @@ public interface RankLeaderboardRepository extends JpaRepository<RankLeaderboard
     long countRankLadder(@Param("platform") String platform, @Param("queueType") String queueType,
                          @Param("maxPosition") int maxPosition, @Param("tier") String tier, @Param("q") String q);
 
+    @Modifying
+    @Query(value = """
+    UPDATE rank_leaderboard l                                                    \s
+    SET kda = s.kda                                                              \s
+    FROM (                                                                       \s
+        SELECT p.puuid,                                                          \s
+               round(((SUM(pa.kills) + SUM(pa.assists))::numeric                 \s
+                      / GREATEST(SUM(pa.deaths), 1)), 2)::float8 AS kda          \s
+        FROM rank_leaderboard rl                                                 \s
+        JOIN players p       ON p.puuid = rl.puuid                               \s
+        JOIN participants pa ON pa.player_id = p.id                              \s
+        JOIN matches m       ON m.id = pa.match_id                               \s
+        WHERE rl.platform      = :platform                                       \s
+          AND rl.queue_type    = :queueType                                      \s
+          AND rl.rank_position <= :maxPosition                                   \s
+          AND m.queue_id       = :queueId                                        \s
+        GROUP BY p.puuid                                                         \s
+    ) s                                                                          \s
+    WHERE l.puuid      = s.puuid                                                 \s
+      AND l.platform   = :platform                                               \s
+      AND l.queue_type = :queueType
+    """, nativeQuery = true)
+    void updateRankLeaderboardKda(@Param("platform") String platform, @Param("queueType") String queueType,
+                                 @Param("maxPosition") int maxPosition, @Param("queueId") int queueId);
+
+    @Modifying
+    @Query(value = """
+    UPDATE rank_leaderboard l                                                    \s
+    SET top_champion_ids = s.ids                                                 \s
+    FROM (                                                                       \s
+        SELECT puuid, array_agg(champion_id ORDER BY rn) AS ids                  \s
+        FROM (                                                                   \s
+            SELECT p.puuid,                                                      \s
+                   pa.champion_id,                                               \s
+                   ROW_NUMBER() OVER (PARTITION BY p.puuid                       \s
+                                      ORDER BY count(*) DESC, pa.champion_id) AS \s
+    rn                                                                           \s
+            FROM rank_leaderboard rl                                             \s
+            JOIN players p       ON p.puuid = rl.puuid                           \s
+            JOIN participants pa ON pa.player_id = p.id                          \s
+            JOIN matches m       ON m.id = pa.match_id                           \s
+            WHERE rl.platform      = :platform                                   \s
+              AND rl.queue_type    = :queueType                                  \s
+              AND rl.rank_position <= :maxPosition                               \s
+              AND m.queue_id       = :queueId                                    \s
+            GROUP BY p.puuid, pa.champion_id                                     \s
+        ) ranked                                                                 \s
+        WHERE rn <= 3                                                            \s
+        GROUP BY puuid                                                           \s
+    ) s                                                                          \s
+    WHERE l.puuid      = s.puuid                                                 \s
+      AND l.platform   = :platform                                               \s
+      AND l.queue_type = :queueType
+    """, nativeQuery = true)
+    void updateRankLeaderboardTopChamps(@Param("platform") String platform, @Param("queueType") String queueType,
+                                       @Param("maxPosition") int maxPosition, @Param("queueId") int queueId);
 }

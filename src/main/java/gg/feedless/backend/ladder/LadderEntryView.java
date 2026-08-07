@@ -11,4 +11,5 @@ public interface LadderEntryView {
     Integer getLosses();
     Double  getKda();
     Integer getDelta();
+    Integer[] getTopChampionIds();
 }

@@ -18,4 +18,10 @@ public class LadderWrite {
         rankLeaderboardRepository.deleteByPlatformAndQueueType(platform, queueType);
         rankLeaderboardRepository.saveAll(entries);
     }
+
+    @Transactional
+    public void enrich(String platform, String queueType, int queueId, int maxPosition) {
+        rankLeaderboardRepository.updateRankLeaderboardKda(platform, queueType, maxPosition, queueId);
+        rankLeaderboardRepository.updateRankLeaderboardTopChamps(platform, queueType, maxPosition, queueId);
+    }
 }

@@ -5,6 +5,7 @@ import gg.feedless.backend.api.ladder.LadderResponse;
 import gg.feedless.backend.player.PlayerRankRepository;
 import gg.feedless.backend.riot.ApexTier;
 import gg.feedless.backend.riot.RiotApiClient;
+import gg.feedless.backend.riot.ddragon.ChampionCatalog;
 import gg.feedless.backend.riot.dto.league.LeagueItemDto;
 import gg.feedless.backend.riot.dto.league.LeagueListDto;
 import gg.feedless.backend.stats.QueueType;
@@ -29,16 +30,19 @@ public class LadderService {
     private final RiotApiClient riotApiClient;
     private final RankLeaderboardRepository rankLeaderboardRepository;
     private final PlayerRankRepository playerRankRepository;
+    private final ChampionCatalog championCatalog;
 
     private final static int PAGE_SIZE = 100;
     private final static int MAX_POSITION = 1000;
 
     public LadderService(LadderWrite ladderWrite, RiotApiClient riotApiClient,
-                         RankLeaderboardRepository rankLeaderboardRepository, PlayerRankRepository playerRankRepository) {
+                         RankLeaderboardRepository rankLeaderboardRepository, PlayerRankRepository playerRankRepository,
+                         ChampionCatalog championCatalog) {
         this.ladderWrite = ladderWrite;
         this.riotApiClient = riotApiClient;
         this.rankLeaderboardRepository = rankLeaderboardRepository;
         this.playerRankRepository = playerRankRepository;
+        this.championCatalog = championCatalog;
     }
 
     @Scheduled(fixedDelay = 600_000)
@@ -66,6 +70,7 @@ public class LadderService {
                         leaderboard.add(rank);
                     }
                     ladderWrite.replace(region.getPlatform(), queue.getLeagueQueue(), leaderboard);
+                    ladderWrite.enrich(region.getPlatform(), queue.getLeagueQueue(), queue.getQueue(), MAX_POSITION);
                 } catch (Exception e) {
                     log.error("LadderService error: ", e);
                 }
@@ -90,8 +95,17 @@ public class LadderService {
         }
         List<LadderEntryResponse> ladderEntryResponseList = new ArrayList<>();
         for (LadderEntryView view: ladderEntryViewList){
+            List<String> topChampionKeys = new ArrayList<>();
+            if (view.getTopChampionIds() != null) {
+                for(Integer id: view.getTopChampionIds()) {
+                    String championKey = championCatalog.getChampionKey(id);
+                    if (championKey != null) {
+                        topChampionKeys.add(championKey);
+                    }
+                }
+            }
             String tierView = view.getTier().charAt(0) + view.getTier().substring(1).toLowerCase();
-            ladderEntryResponseList.add(new LadderEntryResponse(view.getPosition(), view.getName(), view.getTag(), region.name(), view.getProfileIconId(), tierView, view.getLp(), view.getWins(), view.getLosses(), view.getKda(), view.getDelta(), List.of()));
+            ladderEntryResponseList.add(new LadderEntryResponse(view.getPosition(), view.getName(), view.getTag(), region.name(), view.getProfileIconId(), tierView, view.getLp(), view.getWins(), view.getLosses(), view.getKda(), view.getDelta(), topChampionKeys));
         }
 
         return new LadderResponse(queue.name().toLowerCase(), region.name(), page, totalPages, totalPlayers, projection.getChallengerCutoff(), updatedMinutesAgo, ladderEntryResponseList);
