@@ -12,7 +12,7 @@ public class Player {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "puuid", nullable = false, unique = true)
+    @Column(name = "puuid", unique = true)
     private String puuid;
 
     @Column(name = "game_name")
@@ -22,7 +22,10 @@ public class Player {
     private String tagLine;
 
     @Column(name = "profile_icon_id")
-    private Integer profileIconId;
+    private int profileIconId;
+
+    @Column(name = "summoner_level")
+    private int summonerLevel;
 
     @Column(name = "profile_updated_at")
     private OffsetDateTime profileUpdatedAt;
@@ -68,6 +71,14 @@ public class Player {
 
     public void setProfileIconId(int profileIconId) {
         this.profileIconId = profileIconId;
+    }
+
+    public int getSummonerLevel() {
+        return summonerLevel;
+    }
+
+    public void setSummonerLevel(int summonerLevel) {
+        this.summonerLevel = summonerLevel;
     }
 
     public OffsetDateTime getProfileUpdatedAt() {

@@ -100,7 +100,10 @@ public class CrawlWorker {
                     Optional<SummonerDto> summonerInfo = riotApiClient.getSummonerByPuuid(finalAccount.getPlatform() ,claimed.getPuuid());
                     finalAccount.setGameName(accountByRiot.get().gameName());
                     finalAccount.setTagLine(accountByRiot.get().tagLine());
-                    summonerInfo.ifPresent(info -> finalAccount.setProfileIconId(info.profileIconId()));
+                    summonerInfo.ifPresent(info -> {
+                        finalAccount.setProfileIconId(info.profileIconId());
+                        finalAccount.setSummonerLevel((int) info.summonerLevel());
+                    });
                     finalAccount.setProfileUpdatedAt(OffsetDateTime.now());
                     playerRepository.save(finalAccount);
 

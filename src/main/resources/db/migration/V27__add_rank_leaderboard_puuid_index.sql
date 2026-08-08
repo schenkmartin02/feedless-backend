@@ -1,0 +1,1 @@
+CREATE INDEX idx_rank_leaderboard_puuid ON rank_leaderboard (puuid);

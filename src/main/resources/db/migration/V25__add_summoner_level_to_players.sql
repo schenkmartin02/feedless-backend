@@ -1,0 +1,1 @@
+ALTER TABLE players ADD COLUMN summoner_level INT NOT NULL DEFAULT 0;

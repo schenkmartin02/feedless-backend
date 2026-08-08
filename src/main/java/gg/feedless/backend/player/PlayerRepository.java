@@ -53,4 +53,12 @@ public interface PlayerRepository extends JpaRepository<Player, Long> {
     UPDATE players SET ranks_checked_at = now() WHERE puuid IN (:puuids)
     """, nativeQuery = true)
     int saveRankCheck(@Param("puuids") Collection<String> puuids);
+
+    @Query(value = """
+    SELECT p FROM Player p                                                       \s
+      WHERE LOWER(p.gameName) = LOWER(:gameName)                                   \s
+        AND LOWER(p.tagLine)  = LOWER(:tagLine)                                    \s
+        AND p.platform        = :platform
+    """)
+    Optional<Player> getPlayerByNameAndTag(@Param("gameName") String gameName, @Param("tagLine") String tagLine, @Param("platform") String platform);
 }
