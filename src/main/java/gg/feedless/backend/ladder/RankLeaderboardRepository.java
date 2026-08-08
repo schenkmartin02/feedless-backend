@@ -7,6 +7,7 @@ import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 public interface RankLeaderboardRepository extends JpaRepository<RankLeaderboard, Long> {
     @Modifying
@@ -151,8 +152,12 @@ public interface RankLeaderboardRepository extends JpaRepository<RankLeaderboard
     @Query(value = """
     UPDATE rank_leaderboard l                                                    \s
     SET delta = s.rank_position - l.rank_position                                \s
-    FROM ladder_snapshot s                                                       \s
-    WHERE s.snapshot_date = :yesterday                                           \s
+    FROM ladder_snapshot s
+    WHERE s.snapshot_date = (SELECT MAX(s2.snapshot_date)                        \s
+        FROM ladder_snapshot s2                                                  \s
+        WHERE s2.platform      = :platform                                       \s
+        AND s2.queue_type    = :queueType                                      \s
+        AND s2.snapshot_date < :today)                                           \s
       AND s.platform      = l.platform                                           \s
       AND s.queue_type    = l.queue_type                                         \s
       AND s.puuid         = l.puuid                                              \s
@@ -160,6 +165,8 @@ public interface RankLeaderboardRepository extends JpaRepository<RankLeaderboard
       AND l.queue_type    = :queueType                                           \s
       AND l.rank_position <= :maxPosition
     """, nativeQuery = true)
-    void recomputeDelta(@Param("yesterday") LocalDate yesterday, @Param("platform") String platform,
+    void recomputeDelta(@Param("today") LocalDate today, @Param("platform") String platform,
                         @Param("queueType") String queueType, @Param("maxPosition") int maxPosition);
+
+    Optional<RankLeaderboard> findByPlatformAndQueueTypeAndPuuid(String platform, String queueType, String puuid);
 }

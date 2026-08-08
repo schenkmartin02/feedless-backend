@@ -24,6 +24,6 @@ public class LadderWrite {
     public void enrich(String platform, String queueType, int queueId, int maxPosition) {
         rankLeaderboardRepository.updateRankLeaderboardKda(platform, queueType, maxPosition, queueId);
         rankLeaderboardRepository.updateRankLeaderboardTopChamps(platform, queueType, maxPosition, queueId);
-        rankLeaderboardRepository.recomputeDelta(LocalDate.now().minusDays(1), platform, queueType, maxPosition);
+        rankLeaderboardRepository.recomputeDelta(LocalDate.now(), platform, queueType, maxPosition);
     }
 }
