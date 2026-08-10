@@ -61,6 +61,11 @@ public class RiotApiClient {
         return europeApi.get().uri("/lol/match/v5/matches/by-puuid/{puuid}/ids?start=0&count={count}&startTime={startTime}", puuid, count, startTime).retrieve().body(typeRef);
     }
 
+    public List<String> getFirstMatchIdByPuuid(String puuid) {
+        ParameterizedTypeReference<List<String>> typeRef = new ParameterizedTypeReference<>() {};
+        return europeApi.get().uri("/lol/match/v5/matches/by-puuid/{puuid}/ids?start=0&count=1", puuid).retrieve().body(typeRef);
+    }
+
     public MatchDto getMatchByMatchId(String matchId) {
         return europeApi.get().uri("/lol/match/v5/matches/{matchId}", matchId).retrieve().body(MatchDto.class);
     }

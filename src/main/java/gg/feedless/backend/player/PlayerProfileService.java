@@ -2,9 +2,12 @@ package gg.feedless.backend.player;
 
 import gg.feedless.backend.api.player.PlayerResponse;
 import gg.feedless.backend.api.player.RankResponse;
+import gg.feedless.backend.crawl.CrawlJobRepository;
 import gg.feedless.backend.ladder.RankLeaderboard;
 import gg.feedless.backend.ladder.RankLeaderboardRepository;
 import gg.feedless.backend.match.ParticipantRepository;
+import gg.feedless.backend.riot.RiotApiClient;
+import gg.feedless.backend.riot.dto.account.AccountDto;
 import gg.feedless.backend.stats.QueueType;
 import gg.feedless.backend.stats.RegionType;
 import org.springframework.stereotype.Service;
@@ -22,18 +25,38 @@ public class PlayerProfileService {
     private final PlayerRepository playerRepository;
     private final RankLeaderboardRepository rankLeaderboardRepository;
     private final ParticipantRepository participantRepository;
+    private final RiotApiClient riotApiClient;
+    private final CrawlJobRepository crawlJobRepository;
 
-    public PlayerProfileService(PlayerRankRepository playerRankRepository, PlayerRepository playerRepository, RankLeaderboardRepository rankLeaderboardRepository, ParticipantRepository participantRepository) {
+    public PlayerProfileService(PlayerRankRepository playerRankRepository, PlayerRepository playerRepository, RankLeaderboardRepository rankLeaderboardRepository, ParticipantRepository participantRepository, RiotApiClient riotApiClient, CrawlJobRepository crawlJobRepository) {
         this.playerRankRepository = playerRankRepository;
         this.playerRepository = playerRepository;
         this.rankLeaderboardRepository = rankLeaderboardRepository;
         this.participantRepository = participantRepository;
+        this.riotApiClient = riotApiClient;
+        this.crawlJobRepository = crawlJobRepository;
     }
 
     public Optional<PlayerResponse> getPlayer(RegionType region, String gameName, String tagLine) {
         Optional<Player> player = playerRepository.getPlayerByNameAndTag(gameName, tagLine, region.getPlatform());
         if (player.isEmpty()) {
-            return Optional.empty();
+            Optional<AccountDto> account = riotApiClient.getAccountByNameAndTag(gameName, tagLine);
+            if (account.isEmpty()){
+                return Optional.empty();
+            }
+            AccountDto finalAccount = account.get();
+            List<String> firstMatchID = riotApiClient.getFirstMatchIdByPuuid(finalAccount.puuid());
+            if (firstMatchID.isEmpty()) {
+                return Optional.empty();
+            }
+            Optional<RegionType> resolvedRegion =
+                    RegionType.fromSymbol(firstMatchID.getFirst().split("_")[0]);
+            if (resolvedRegion.isEmpty()) {
+                return Optional.empty();
+            }
+            playerRepository.insertPlayer(finalAccount.puuid(), finalAccount.gameName(), finalAccount.tagLine(), resolvedRegion.get().getPlatform());
+            crawlJobRepository.enqueue(finalAccount.puuid(), 1);
+            return Optional.of(new PlayerResponse(finalAccount.gameName(), finalAccount.tagLine(), resolvedRegion.get().name(), 0, 0, null, null, null, null, null, List.of()));
         }
         Player finalPlayer = player.get();
         List<PlayerRank> playerRank = playerRankRepository.findByPlayerId(finalPlayer.getId());

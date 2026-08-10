@@ -48,6 +48,16 @@ public interface PlayerRepository extends JpaRepository<Player, Long> {
     """, nativeQuery = true)
     List<String> findTopUnrankedPuuids(@Param("platform") String platform, @Param("cutoff")OffsetDateTime cutoff, @Param("batchSize") int batchSize);
 
+    @Transactional
+    @Modifying
+    @Query(value = """
+    INSERT INTO players (puuid, game_name, tag_line, platform)                   \s
+    VALUES (:puuid, :gameName, :tagLine, :platform)                              \s
+    ON CONFLICT (puuid) DO NOTHING
+    """, nativeQuery = true)
+    void insertPlayer(@Param("puuid") String puuid, @Param("gameName") String gameName, @Param("tagLine") String tagLine,
+                      @Param("platform") String platform);
+
     @Modifying
     @Query(value = """
     UPDATE players SET ranks_checked_at = now() WHERE puuid IN (:puuids)
