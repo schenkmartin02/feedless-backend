@@ -34,6 +34,8 @@ riot:
     per-10-minutes: 30000
 
 crawler:
+  refresh:
+    cooldown-minutes: 5
   profile-refresh-ttl-days: 5
   recrawl:
     interval-ms: 60000

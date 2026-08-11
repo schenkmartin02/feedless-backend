@@ -58,4 +58,23 @@ public interface CrawlJobRepository extends JpaRepository<CrawlJob, Long> {
     int scheduleRecrawl(@Param("cutoff") OffsetDateTime cutoff, @Param("batchSize") int batchSize);
 
     Optional<CrawlJob> findByPuuid(String puuid);
+
+    @Transactional
+    @Modifying
+    @Query(value = """                                                            
+          INSERT INTO crawl_queue (puuid, priority, status)                     
+          VALUES (:puuid, 2, 'PENDING')                                         
+          ON CONFLICT (puuid) DO UPDATE                                         
+          SET status        = 'PENDING',                                        
+              priority      = 2,                                                
+              started_at    = null,                                             
+              retry_counter = 0                                                 
+          WHERE crawl_queue.status <> 'IN_PROGRESS'                             
+            AND (crawl_queue.last_crawled_at IS NULL                            
+                 OR crawl_queue.last_crawled_at < :cutoff)                      
+          """, nativeQuery = true)
+    int requestRefresh(
+            @Param("puuid") String puuid,
+            @Param("cutoff") OffsetDateTime cutoff
+    );
 }
