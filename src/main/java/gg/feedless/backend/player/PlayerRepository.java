@@ -58,6 +58,7 @@ public interface PlayerRepository extends JpaRepository<Player, Long> {
     void insertPlayer(@Param("puuid") String puuid, @Param("gameName") String gameName, @Param("tagLine") String tagLine,
                       @Param("platform") String platform);
 
+    @Transactional
     @Modifying
     @Query(value = """
     UPDATE players SET ranks_checked_at = now() WHERE puuid IN (:puuids)

@@ -10,6 +10,7 @@ import gg.feedless.backend.riot.dto.account.AccountDto;
 import gg.feedless.backend.riot.dto.league.LeagueEntryDto;
 import gg.feedless.backend.riot.dto.match.MatchDto;
 import gg.feedless.backend.riot.dto.summoner.SummonerDto;
+import gg.feedless.backend.stats.RegionType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -179,36 +180,60 @@ public class CrawlWorker {
         }
     }
 
-    @Transactional
     @Scheduled(fixedDelay = 60_000)
-    public void backfillPlayerRanks() {
-        List<String> players = playerRepository.findTopUnrankedPuuids("EUN1", OffsetDateTime.now().minusDays(30), 1000);
-        List<String> donePuuid = new ArrayList<>();
-        List<Future<Set<LeagueEntryDto>>> leagueEntryFuture = new ArrayList<>();
-        for (String puuid : players) {
-            Optional<Player> player = playerRepository.findByPuuid(puuid);
-            if (player.isEmpty()) {
-                return;
-            }
-            leagueEntryFuture.add(rankExecutorService.submit(() -> riotApiClient.getLeagueByPuuid(puuid, player.get().getPlatform())));
+    public void backfillPlayerRanksEUNE() {
+        processPlayerRanks(RegionType.EUNE);
+    }
+
+    @Scheduled(fixedDelay = 60_000, initialDelay = 30_000)
+    public void backfillPlayerRanksEUW() {
+        processPlayerRanks(RegionType.EUW);
+    }
+
+    private void processPlayerRanks(RegionType region) {
+        String platform = region.getPlatform();
+        List<String> players = playerRepository.findTopUnrankedPuuids(platform, OffsetDateTime.now().minusDays(30), 1000);
+
+        if (players.isEmpty()) {
+            return;
         }
-        for (int i = 0; i < leagueEntryFuture.size(); i++) {
+
+        List<String> donePuuids = new ArrayList<>();
+        List<Future<Set<LeagueEntryDto>>> leagueEntryFutures = new ArrayList<>();
+
+        for (String puuid : players) {
+            leagueEntryFutures.add(rankExecutorService.submit(() ->
+                    riotApiClient.getLeagueByPuuid(puuid, platform)
+            ));
+        }
+
+        for (int i = 0; i < leagueEntryFutures.size(); i++) {
+            String currentPuuid = players.get(i);
             try {
-                for (LeagueEntryDto league : leagueEntryFuture.get(i).get()) {
-                    playerRankRepository.upsertPlayerRank(players.get(i), league.queueType(), league.tier(), league.rank(), league.leaguePoints(), league.wins(), league.losses());
+                Set<LeagueEntryDto> leagues = leagueEntryFutures.get(i).get();
+
+                for (LeagueEntryDto league : leagues) {
+                    playerRankRepository.upsertPlayerRank(
+                            currentPuuid, league.queueType(), league.tier(),
+                            league.rank(), league.leaguePoints(), league.wins(), league.losses()
+                    );
                 }
-                donePuuid.add(players.get(i));
+                donePuuids.add(currentPuuid);
+
             } catch (ExecutionException e) {
-                log.error("ExecutionExceptionError: puuid: {}, message: ", players.get(i), e);
+                log.error("ExecutionException for puuid: {}", currentPuuid, e);
             } catch (InterruptedException e) {
-                log.error("InterruptedExceptionError: puuid: {}, message: ", players.get(i), e);
+                log.error("InterruptedException while waiting for player ranks, aborting...", e);
+                Thread.currentThread().interrupt();
                 break;
             }
         }
-        int puuids = 0;
-        if (!donePuuid.isEmpty()) {
-            puuids = playerRepository.saveRankCheck(donePuuid);
+
+        int updatedCount = 0;
+        if (!donePuuids.isEmpty()) {
+            updatedCount = playerRepository.saveRankCheck(donePuuids);
         }
-        log.info("{} player ranks is up to date", puuids);
+
+        log.info("{} player ranks updated in {}", updatedCount, region.name());
     }
 }
