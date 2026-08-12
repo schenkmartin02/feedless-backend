@@ -8,6 +8,7 @@ import gg.feedless.backend.match.MatchParticipantView;
 import gg.feedless.backend.match.ParticipantRepository;
 import gg.feedless.backend.riot.ddragon.ChampionCatalog;
 import gg.feedless.backend.stats.MatchQueueFilter;
+import gg.feedless.backend.stats.QueueNames;
 import gg.feedless.backend.stats.RegionType;
 import org.springframework.stereotype.Service;
 
@@ -75,7 +76,7 @@ public class MatchHistoryService {
             matchResponsesList.add(new MatchResponse(view.getMatchId(),
                     championCatalog.getChampionKey(view.getChampionId()), view.getWin(), view.getKills(),
                     view.getDeaths(), view.getAssists(), view.getCs(), csPerMin, goldPerMin, view.getLevel(),
-                    queueName(view.getQueueId()), Math.toIntExact(durationSeconds), playedMinutesAgo, null,
+                    QueueNames.of(view.getQueueId()), Math.toIntExact(durationSeconds), playedMinutesAgo, null,
                     badges(view, participantViews, playerId), itemIds(view.getItem0(), view.getItem1(), view.getItem2(), view.getItem3(),
                     view.getItem4(), view.getItem5(), view.getItem6()), blueTeam, redTeam));
         }
@@ -114,16 +115,6 @@ public class MatchHistoryService {
         result.add(item5);
         result.add(item6);
         return  result;
-    }
-
-    private String queueName(int queueId){
-        return switch (queueId) {
-            case 420 -> "solo";
-            case 440 -> "flex";
-            case 450, 720 -> "aram";
-            case 400, 430, 480, 490, 700 -> "normal";
-            default -> "other";
-        };
     }
 
     private MatchPlayerResponse toMatchPlayer(MatchParticipantView view, Long playerId) {

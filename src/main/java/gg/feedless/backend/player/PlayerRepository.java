@@ -72,4 +72,24 @@ public interface PlayerRepository extends JpaRepository<Player, Long> {
         AND p.platform        = :platform
     """)
     Optional<Player> getPlayerByNameAndTag(@Param("gameName") String gameName, @Param("tagLine") String tagLine, @Param("platform") String platform);
+
+    @Query(value = """
+    SELECT p.game_name       AS "name",                                                \s
+             p.tag_line        AS "tag",                                                 \s
+             p.profile_icon_id AS "profileIconId",                                       \s
+             pr.tier           AS "tier",                                                \s
+             pr.division       AS "division"                                             \s
+      FROM players p                                                                     \s
+      LEFT JOIN player_ranks pr                                                          \s
+             ON pr.player_id = p.id                                                      \s
+            AND pr.queue_type = 'RANKED_SOLO_5x5'                                        \s
+      WHERE p.platform = :platform                                                       \s
+        AND f_unaccent(lower(p.game_name)) LIKE f_unaccent(lower(:namePrefix)) || '%'    \s
+        AND (CAST(:tagPrefix AS varchar) IS NULL OR lower(p.tag_line) LIKE               \s
+      lower(:tagPrefix) || '%')                                                          \s
+      ORDER BY f_unaccent(lower(p.game_name)) COLLATE "C"                                \s
+      LIMIT :limit
+    """, nativeQuery = true)
+    List<PlayerSearchView> searchPlayers(@Param("platform") String platform, @Param("namePrefix") String namePrefix,
+                                         @Param("tagPrefix") String tagPrefix, @Param("limit") int limit);
 }

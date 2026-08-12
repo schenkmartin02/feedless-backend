@@ -11,6 +11,7 @@ import gg.feedless.backend.match.ParticipantRepository;
 import gg.feedless.backend.riot.RiotApiClient;
 import gg.feedless.backend.riot.dto.account.AccountDto;
 import gg.feedless.backend.stats.QueueType;
+import gg.feedless.backend.stats.RankLabel;
 import gg.feedless.backend.stats.RegionType;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -18,7 +19,6 @@ import org.springframework.stereotype.Service;
 import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.util.List;
-import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -71,13 +71,13 @@ public class PlayerProfileService {
         RankResponse teamRank = null;
         for (PlayerRank rank: playerRank){
             if (Objects.equals(rank.getQueueType(), "RANKED_SOLO_5x5")){
-                soloRank = new RankResponse(label(rank.getTier(), rank.getDivision()), rank.getLeaguePoints(), rank.getWins(), rank.getLosses());
+                soloRank = new RankResponse(RankLabel.of(rank.getTier(), rank.getDivision()), rank.getLeaguePoints(), rank.getWins(), rank.getLosses());
             }
             if (Objects.equals(rank.getQueueType(), "RANKED_FLEX_SR")){
-                flexRank = new RankResponse(label(rank.getTier(), rank.getDivision()), rank.getLeaguePoints(), rank.getWins(), rank.getLosses());
+                flexRank = new RankResponse(RankLabel.of(rank.getTier(), rank.getDivision()), rank.getLeaguePoints(), rank.getWins(), rank.getLosses());
             }
             if (Objects.equals(rank.getQueueType(), "RANKED_PREMADE_5x5")){
-                teamRank = new RankResponse(label(rank.getTier(), rank.getDivision()), rank.getLeaguePoints(), rank.getWins(), rank.getLosses());
+                teamRank = new RankResponse(RankLabel.of(rank.getTier(), rank.getDivision()), rank.getLeaguePoints(), rank.getWins(), rank.getLosses());
             }
         }
         Optional<RankLeaderboard> ladderRanks = rankLeaderboardRepository.findByPlatformAndQueueTypeAndPuuid(region.getPlatform(), QueueType.SOLO.getLeagueQueue(), finalPlayer.getPuuid());
@@ -116,23 +116,5 @@ public class PlayerProfileService {
             return RefreshResult.STARTED;
         }
         return RefreshResult.THROTTLED;
-    }
-
-    private String label(String tier, String division) {
-        tier = tier.charAt(0) + tier.substring(1).toLowerCase(Locale.ROOT);
-        String rank = switch (division){
-            case "I" -> "1";
-            case "II" -> "2";
-            case "III" -> "3";
-            case "IV" -> "4";
-            default -> null;
-        };
-        if (tier.equals("Master") || tier.equals("Grandmaster") || tier.equals("Challenger")) {
-            rank = null;
-        }
-        if (rank == null) {
-            return tier;
-        }
-        return tier + " " + rank;
     }
 }

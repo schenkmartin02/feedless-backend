@@ -4,6 +4,7 @@ import gg.feedless.backend.riot.dto.account.AccountDto;
 import gg.feedless.backend.riot.dto.league.LeagueEntryDto;
 import gg.feedless.backend.riot.dto.league.LeagueListDto;
 import gg.feedless.backend.riot.dto.match.MatchDto;
+import gg.feedless.backend.riot.dto.spectator.CurrentGameDto;
 import gg.feedless.backend.riot.dto.summoner.SummonerDto;
 import gg.feedless.backend.stats.QueueType;
 import gg.feedless.backend.stats.RegionType;
@@ -102,6 +103,22 @@ public class RiotApiClient {
         }
         if (client != null) {
             return Optional.ofNullable(client.get().uri("/lol/league/v4/{tier}/by-queue/{queue}", tier.getLeagues(), queue.getLeagueQueue()).retrieve().body(LeagueListDto.class));
+        }
+        return Optional.empty();
+    }
+
+    public Optional<CurrentGameDto> getActiveGameByPuuid(String puuid, String region){
+        RestClient client = getRestClientByRegion(region);
+        try {
+            if (client != null) {
+                return Optional.ofNullable(client.get().uri("/lol/spectator/v5/active-games/by-summoner/{puuid}", puuid).retrieve().body(CurrentGameDto.class));
+            }
+        } catch (HttpClientErrorException error) {
+            if (error.getStatusCode().equals(HttpStatus.NOT_FOUND)) {
+                return Optional.empty();
+            } else {
+                throw error;
+            }
         }
         return Optional.empty();
     }
