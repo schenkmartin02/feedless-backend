@@ -1,28 +1,33 @@
 package gg.feedless.backend.api.player;
 
 import gg.feedless.backend.player.MatchHistoryService;
+import gg.feedless.backend.player.PlayerChampionService;
 import gg.feedless.backend.player.PlayerProfileService;
 import gg.feedless.backend.player.RefreshResult;
 import gg.feedless.backend.stats.MatchQueueFilter;
+import gg.feedless.backend.stats.QueueType;
 import gg.feedless.backend.stats.RegionType;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Optional;
 
 @RestController
 public class PlayerController {
     private final PlayerProfileService playerProfileService;
     private final MatchHistoryService matchHistoryService;
+    private final PlayerChampionService playerChampionService;
 
     private final int refreshCooldownMinutes;
 
-    public PlayerController(PlayerProfileService playerProfileService, @Value("${crawler.refresh.cooldown-minutes}") int refreshCooldownMinutes, MatchHistoryService matchHistoryService) {
+    public PlayerController(PlayerProfileService playerProfileService, @Value("${crawler.refresh.cooldown-minutes}") int refreshCooldownMinutes, MatchHistoryService matchHistoryService, PlayerChampionService playerChampionService) {
         this.playerProfileService = playerProfileService;
         this.refreshCooldownMinutes = refreshCooldownMinutes;
         this.matchHistoryService = matchHistoryService;
+        this.playerChampionService = playerChampionService;
     }
 
     @GetMapping("/players/{region}/{name}/{tag}")
@@ -47,6 +52,12 @@ public class PlayerController {
             page = 1;
         }
         Optional<MatchHistoryResponse> result = matchHistoryService.getMatchHistory(region, name, tag, queue, page);
+        return result.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
+    @GetMapping("/players/{region}/{name}/{tag}/champions")
+    public ResponseEntity<List<PlayerChampionResponse>> getPlayerChampion(@PathVariable RegionType region, @PathVariable String name, @PathVariable String tag, @RequestParam(defaultValue = "solo") QueueType queue){
+        Optional<List<PlayerChampionResponse>> result = playerChampionService.getPlayerChampions(region, name, tag, queue);
         return result.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
     }
 }

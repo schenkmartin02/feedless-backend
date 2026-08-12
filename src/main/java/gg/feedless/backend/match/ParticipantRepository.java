@@ -85,4 +85,24 @@ public interface ParticipantRepository extends JpaRepository<Participant, Long> 
                END
     """, nativeQuery = true)
     List<MatchParticipantView> findParticipantsByMatchIds(@Param("matchRowIds") List<Long> matchRowIds);
+
+    @Query(value = """
+    SELECT p.champion_id                                          AS "championId",
+           COUNT(*)                                               AS "games",
+           SUM(CASE WHEN p.win THEN 1 ELSE 0 END)                 AS "wins",
+           SUM(p.kills)                                           AS "kills",
+           SUM(p.deaths)                                          AS "deaths",
+           SUM(p.assists)                                         AS "assists",
+           SUM(p.total_minions_killed + p.neutral_minions_killed) AS "cs",
+           SUM(p.gold_earned)                                     AS "gold",
+           SUM(m.game_duration)                                   AS "duration"
+    FROM participants p
+    JOIN matches m ON m.id = p.match_id
+    WHERE p.player_id = :playerId
+      AND m.queue_id = :queueId
+      AND m.game_duration >= 300
+    GROUP BY p.champion_id
+    ORDER BY COUNT(*) DESC, p.champion_id
+    """, nativeQuery = true)
+    List<PlayerChampionView> findPlayerChampionStats(@Param("playerId") Long playedId, @Param("queueId") int queueId);
 }
