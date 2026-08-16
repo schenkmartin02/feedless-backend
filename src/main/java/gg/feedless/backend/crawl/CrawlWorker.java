@@ -24,10 +24,7 @@ import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.ResourceAccessException;
 
 import java.time.OffsetDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
@@ -118,6 +115,9 @@ public class CrawlWorker {
                 List<String> matchList;
                 int count = claimed.getLastCrawledAt() == null ? NEW_CRAWL_MATCH_LIST : RE_CRAWL_MATCH_LIST;
                 matchList = riotApiClient.getMatchListByPuuid(claimed.getPuuid(), count, OffsetDateTime.now().minusDays(MATCH_LIST_START_TIME).toEpochSecond());
+                matchList = matchList.stream()
+                        .filter(id -> RegionType.fromSymbol(id.split("_")[0]).isPresent())
+                        .toList();
                 List<Match> existMatchList = matchRepository.findByMatchIdIn(matchList);
                 Set<String> existingMatchIds = existMatchList.stream()
                         .map(Match::getMatchId)
