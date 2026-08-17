@@ -61,7 +61,7 @@ public class PlayerProfileService {
                 return Optional.empty();
             }
             playerRepository.insertPlayer(finalAccount.puuid(), finalAccount.gameName(), finalAccount.tagLine(), resolvedRegion.get().getPlatform());
-            crawlJobRepository.enqueue(finalAccount.puuid(), 2);
+            crawlJobRepository.enqueue(finalAccount.puuid(), 2, resolvedRegion.get().getPlatform());
             return Optional.of(new PlayerResponse(finalAccount.gameName(), finalAccount.tagLine(), resolvedRegion.get().name(), 0, 0, null, null, null, null, null, List.of(), true));
         }
         Player finalPlayer = player.get();
@@ -111,7 +111,7 @@ public class PlayerProfileService {
             return RefreshResult.NOT_FOUND;
         }
         OffsetDateTime cutoff = OffsetDateTime.now().minusMinutes(refreshCooldownMinutes);
-        int result = crawlJobRepository.requestRefresh(player.get().getPuuid(), cutoff);
+        int result = crawlJobRepository.requestRefresh(player.get().getPuuid(), cutoff, region.getPlatform());
         if (result == 1) {
             return RefreshResult.STARTED;
         }

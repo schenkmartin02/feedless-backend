@@ -71,13 +71,22 @@ public class CrawlWorker {
     }
 
     @Scheduled(fixedDelay = 100)
-    public void tick() {
-        Optional<CrawlJob> job = crawlJobRepository.claimNextJob();
+    public void crawlerEUNE(){
+        tick(RegionType.EUNE);
+    }
+
+    @Scheduled(fixedDelay = 100)
+    public void crawlerEUW(){
+        tick(RegionType.EUW);
+    }
+
+    private void tick(RegionType region) {
+        Optional<CrawlJob> job = crawlJobRepository.claimNextJob(region.getPlatform());
         if (job.isPresent()) {
             CrawlJob claimed = job.get();
             try {
 
-                log.info("Claimed job for puuid {}", claimed.getPuuid());
+                log.info("Claimed job for puuid {}, region {}", claimed.getPuuid(), region.name());
                 Optional<Player> account = playerRepository.findByPuuid(claimed.getPuuid());
                 if (account.isEmpty()) {
                     account = Optional.of(new Player(claimed.getPuuid()));
@@ -125,7 +134,7 @@ public class CrawlWorker {
                         .collect(Collectors.toSet());
                 List<String> newMatchIdList = matchList.stream()
                         .filter(matchId -> !existingMatchIds.contains(matchId))
-                        .toList();
+                        .toList().reversed();
 
                 List<Future<MatchDto>> matchFutureList = new ArrayList<>();
                 for (String matchId: newMatchIdList){

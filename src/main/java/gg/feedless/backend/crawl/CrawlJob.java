@@ -27,6 +27,9 @@ public class CrawlJob {
     @Column(name = "retry_counter", nullable = false)
     private int retryCounter;
 
+    @Column(name = "platform")
+    private String platform;
+
     @Column(name = "started_at")
     private OffsetDateTime startedAt;
 
@@ -36,11 +39,12 @@ public class CrawlJob {
     //JPA-Only
     protected CrawlJob() {}
 
-    public CrawlJob(String puuid, int priority) {
+    public CrawlJob(String puuid, int priority, String platform) {
         this.puuid = puuid;
         this.status = CrawlStatus.PENDING;
         this.priority = priority;
         this.createdAt = OffsetDateTime.now();
+        this.platform = platform;
     }
 
     public Long getId() {
@@ -93,5 +97,13 @@ public class CrawlJob {
 
     public OffsetDateTime getCreatedAt() {
         return createdAt;
+    }
+
+    public String getPlatform() {
+        return platform;
+    }
+
+    public void setPlatform(String platform) {
+        this.platform = platform;
     }
 }

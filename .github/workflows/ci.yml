@@ -1,0 +1,32 @@
+name: CI
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    # A tesztek nem hivjak a Riot API-t, es a DB/Redis kapcsolatot a Testcontainers
+    # adja - de az application.yml placeholderei default nelkuliek, tehat a
+    # kontextus fel sem epulne ertek nelkul. Ezert dummy ertekek, NEM titkok.
+    env:
+      RIOT_KEY: ci-dummy
+      POSTGRES_PASSWORD: ci-dummy
+      REDIS_PASSWORD: ci-dummy
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Build and test
+        run: ./mvnw --batch-mode verify

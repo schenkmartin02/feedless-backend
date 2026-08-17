@@ -73,7 +73,7 @@ public class MatchIngestService {
         participantRepository.saveAll(buildParticipants(matchId, savedMatch.getId(), participantDtos, playerMap));
 
         for (String puuid: matchDto.metadata().participants()) {
-            crawlJobRepository.enqueue(puuid, 0);
+            crawlJobRepository.enqueue(puuid, 0, platform);
         }
     }
 

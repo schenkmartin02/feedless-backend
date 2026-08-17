@@ -26,28 +26,28 @@ class CrawlJobRepositoryTest {
 
     @Test
     void enqueue() {
-        int result = crawlJobRepository.enqueue("test2", 0);
-        int result2 = crawlJobRepository.enqueue("test2", 0);
+        int result = crawlJobRepository.enqueue("test2", 0, "EUN1");
+        int result2 = crawlJobRepository.enqueue("test2", 0, "EUN1");
         assertEquals(1, result);
         assertEquals(0, result2);
     }
 
     @Test
     void claimNextJob() {
-        CrawlJob testJob = new CrawlJob("test", 0);
+        CrawlJob testJob = new CrawlJob("test", 0, "EUN1");
         testJob.setStatus(CrawlStatus.IN_PROGRESS);
         crawlJobRepository.save(testJob);
 
-        CrawlJob testJob2 = new CrawlJob("test2", 0);
+        CrawlJob testJob2 = new CrawlJob("test2", 0, "EUN1");
         crawlJobRepository.save(testJob2);
 
-        Optional<CrawlJob> result = crawlJobRepository.claimNextJob();
+        Optional<CrawlJob> result = crawlJobRepository.claimNextJob("EUN1");
         assertEquals("test2", result.get().getPuuid());
     }
 
     @Test
     void findByPuuid() {
-        CrawlJob testJob = new CrawlJob("test", 0);
+        CrawlJob testJob = new CrawlJob("test", 0, "EUN1");
         testJob.setStatus(CrawlStatus.IN_PROGRESS);
         crawlJobRepository.save(testJob);
 
@@ -57,29 +57,29 @@ class CrawlJobRepositoryTest {
 
     @Test
     void claimNextJobForPriority() {
-        CrawlJob testJob = new CrawlJob("test", 0);
+        CrawlJob testJob = new CrawlJob("test", 0, "EUN1");
         crawlJobRepository.save(testJob);
 
-        CrawlJob testJob2 = new CrawlJob("test2", 2);
+        CrawlJob testJob2 = new CrawlJob("test2", 2, "EUN1");
         crawlJobRepository.save(testJob2);
 
-        Optional<CrawlJob> result = crawlJobRepository.claimNextJob();
+        Optional<CrawlJob> result = crawlJobRepository.claimNextJob("EUN1");
         assertEquals("test2", result.get().getPuuid());
     }
 
     @Test
     void recoveryTest() {
-        CrawlJob testJob = new CrawlJob("recovery", 0);
+        CrawlJob testJob = new CrawlJob("recovery", 0, "EUN1");
         testJob.setStatus(CrawlStatus.IN_PROGRESS);
         testJob.setStartedAt(OffsetDateTime.now().minusMinutes(30));
         crawlJobRepository.save(testJob);
 
-        CrawlJob testJob2 = new CrawlJob("recovery2", 0);
+        CrawlJob testJob2 = new CrawlJob("recovery2", 0, "EUN1");
         testJob2.setStatus(CrawlStatus.IN_PROGRESS);
         testJob2.setStartedAt(OffsetDateTime.now().minusMinutes(5));
         crawlJobRepository.save(testJob2);
 
-        int resultSum = crawlJobRepository.recovery(OffsetDateTime.now().minusMinutes(20));
+        int resultSum = crawlJobRepository.recovery(OffsetDateTime.now().minusMinutes(20), 5);
         Optional<CrawlJob> result = crawlJobRepository.findByPuuid("recovery");
         Optional<CrawlJob> result2 = crawlJobRepository.findByPuuid("recovery2");
 
@@ -92,16 +92,16 @@ class CrawlJobRepositoryTest {
 
     @Test
     void scheduleRecrawl() {
-        CrawlJob testJob = new CrawlJob("recovery", 0);
+        CrawlJob testJob = new CrawlJob("recovery", 0, "EUN1");
         testJob.setStatus(CrawlStatus.DONE);
         crawlJobRepository.save(testJob);
 
-        CrawlJob testJob2 = new CrawlJob("recovery2", 0);
+        CrawlJob testJob2 = new CrawlJob("recovery2", 0, "EUN1");
         testJob2.setStatus(CrawlStatus.DONE);
         testJob2.setLastCrawledAt(OffsetDateTime.now().minusDays(2));
         crawlJobRepository.save(testJob2);
 
-        CrawlJob testJob3 = new CrawlJob("recovery3", 0);
+        CrawlJob testJob3 = new CrawlJob("recovery3", 0, "EUN1");
         testJob3.setStatus(CrawlStatus.DONE);
         testJob3.setLastCrawledAt(OffsetDateTime.now().minusDays(2));
         crawlJobRepository.save(testJob3);
