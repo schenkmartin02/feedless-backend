@@ -38,14 +38,14 @@ public interface CrawlJobRepository extends JpaRepository<CrawlJob, Long> {
             UPDATE crawl_queue
             SET
                 status = CASE
-                            WHEN retry_counter + 1 >= 10 THEN 'ERROR'
+                            WHEN retry_counter + 1 >= :maxRetries THEN 'ERROR'
                             ELSE 'PENDING'
                          END,
                 started_at = null,
                 retry_counter = retry_counter + 1
             WHERE status = 'IN_PROGRESS' AND started_at < :cutoff
             """, nativeQuery = true)
-    int recovery(@Param("cutoff") OffsetDateTime cutoff);
+    int recovery(@Param("cutoff") OffsetDateTime cutoff, @Param("maxRetries") int maxRetries);
 
 
     @Modifying(clearAutomatically = true)
@@ -62,16 +62,16 @@ public interface CrawlJobRepository extends JpaRepository<CrawlJob, Long> {
     @Transactional
     @Modifying
     @Query(value = """                                                            
-          INSERT INTO crawl_queue (puuid, priority, status)                     
-          VALUES (:puuid, 2, 'PENDING')                                         
-          ON CONFLICT (puuid) DO UPDATE                                         
-          SET status        = 'PENDING',                                        
-              priority      = 2,                                                
-              started_at    = null,                                             
-              retry_counter = 0                                                 
-          WHERE crawl_queue.status <> 'IN_PROGRESS'                             
-            AND (crawl_queue.last_crawled_at IS NULL                            
-                 OR crawl_queue.last_crawled_at < :cutoff)                      
+          INSERT INTO crawl_queue (puuid, priority, status)
+          VALUES (:puuid, 2, 'PENDING')
+          ON CONFLICT (puuid) DO UPDATE
+          SET status        = 'PENDING',
+              priority      = 2,
+              started_at    = null,
+              retry_counter = 0
+          WHERE crawl_queue.status <> 'IN_PROGRESS'
+            AND (crawl_queue.last_crawled_at IS NULL
+                 OR crawl_queue.last_crawled_at < :cutoff)
           """, nativeQuery = true)
     int requestRefresh(
             @Param("puuid") String puuid,

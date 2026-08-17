@@ -49,12 +49,13 @@ public class CrawlWorker {
     private final int profileTTLInDays;
     private final int recrawlTTLInDays;
     private final int batchSize;
+    private final int maxRetries;
 
     private static final int NEW_CRAWL_MATCH_LIST = 20;
     private static final int RE_CRAWL_MATCH_LIST = 100;
     private static final int MATCH_LIST_START_TIME = 30;
 
-    public CrawlWorker(CrawlJobRepository crawlJobRepository, RiotApiClient riotApiClient, PlayerRepository playerRepository, PlayerRankRepository playerRankRepository, MatchRepository matchRepository, MatchIngestService matchIngestService, @Value("${crawler.profile-refresh-ttl-days}") int profileTTLInDays, @Value("${crawler.recrawl.ttl-days}") int recrawlTTLInDays, @Value("${crawler.recrawl.batch-size}") int batchSize, @Qualifier("matchFetchExecutor") ExecutorService matchExecutorService, @Qualifier("rankFetchExecutor") ExecutorService rankExecutorService) {
+    public CrawlWorker(CrawlJobRepository crawlJobRepository, RiotApiClient riotApiClient, PlayerRepository playerRepository, PlayerRankRepository playerRankRepository, MatchRepository matchRepository, MatchIngestService matchIngestService, @Value("${crawler.profile-refresh-ttl-days}") int profileTTLInDays, @Value("${crawler.recrawl.ttl-days}") int recrawlTTLInDays, @Value("${crawler.recrawl.batch-size}") int batchSize, @Qualifier("matchFetchExecutor") ExecutorService matchExecutorService, @Qualifier("rankFetchExecutor") ExecutorService rankExecutorService, @Value("${crawler.max-retries}") int maxRetries) {
         this.crawlJobRepository = crawlJobRepository;
         this.riotApiClient = riotApiClient;
         this.playerRepository = playerRepository;
@@ -66,6 +67,7 @@ public class CrawlWorker {
         this.batchSize = batchSize;
         this.matchExecutorService = matchExecutorService;
         this.rankExecutorService = rankExecutorService;
+        this.maxRetries = maxRetries;
     }
 
     @Scheduled(fixedDelay = 100)
@@ -84,13 +86,12 @@ public class CrawlWorker {
                 if (accountMustUpdateTime == null || claimed.getPriority() >= 2 || accountMustUpdateTime.isBefore(OffsetDateTime.now().minusDays(profileTTLInDays))) {
                     Optional<AccountDto> accountByRiot = riotApiClient.getAccountByPuuid(claimed.getPuuid());
                     if (accountByRiot.isEmpty()) {
-                        if (claimed.getRetryCounter() >= 4) {
-                            claimed.setStatus(CrawlStatus.ERROR);
-                            crawlJobRepository.save(claimed);
-                            return;
-                        }
                         claimed.setRetryCounter(claimed.getRetryCounter() + 1);
-                        claimed.setStatus(CrawlStatus.PENDING);
+                        if (claimed.getRetryCounter() >= maxRetries){
+                            claimed.setStatus(CrawlStatus.ERROR);
+                        } else {
+                            claimed.setStatus(CrawlStatus.PENDING);
+                        }
                         crawlJobRepository.save(claimed);
                         return;
                     }
@@ -152,11 +153,19 @@ public class CrawlWorker {
                 claimed.setStatus(CrawlStatus.PENDING);
                 crawlJobRepository.save(claimed);
             } catch (HttpClientErrorException error) {
-                if (error.getStatusCode() == HttpStatus.NOT_FOUND) {
+                if (error.getStatusCode() == HttpStatus.NOT_FOUND || error.getStatusCode() == HttpStatus.BAD_REQUEST) {
                     claimed.setRetryCounter(claimed.getRetryCounter() + 1);
                 }
-                log.error("Error for {}", claimed.getPuuid(), error);
-                claimed.setStatus(CrawlStatus.PENDING);
+                if (error.getStatusCode() == HttpStatus.NOT_FOUND){
+                    log.warn("Error for {}", claimed.getPuuid());
+                } else {
+                    log.error("Error for {}", claimed.getPuuid(), error);
+                }
+                if (claimed.getRetryCounter() >= maxRetries) {
+                    claimed.setStatus(CrawlStatus.ERROR);
+                } else {
+                    claimed.setStatus(CrawlStatus.PENDING);
+                }
                 crawlJobRepository.save(claimed);
             }
         }
@@ -174,7 +183,7 @@ public class CrawlWorker {
     @Transactional
     @Scheduled(fixedDelay = 5_000)
     public void recovery() {
-        int result = crawlJobRepository.recovery(OffsetDateTime.now().minusMinutes(15));
+        int result = crawlJobRepository.recovery(OffsetDateTime.now().minusMinutes(15), maxRetries);
         if (result > 0) {
             log.warn("Recovered {} stale crawl jobs stuck in IN_PROGRESS", result);
         }
