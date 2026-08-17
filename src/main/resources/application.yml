@@ -59,3 +59,6 @@ stats:
       ban-ms:      1500000       # 45 perc
       champion-snapshot-ms: 600000
       ban-snapshot-ms: 1800000
+
+cors:
+  allowed-origins: https://feedless.gg
