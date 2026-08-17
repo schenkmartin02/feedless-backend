@@ -1,0 +1,21 @@
+# A tanusitvany a Cloudflare Origin Certificate - NEM Let's Encrypt.
+# Ezert nincs benne email es ACME-beallitas: a Caddy csak felhasznalja a
+# ket fajlt, amit a Cloudflare-tol letoltottel.
+#
+# A lanc: bongeszo --(Cloudflare tanusitvany)--> Cloudflare --(origin cert)--> ez a Caddy
+# Ettol lesz a Cloudflare SSL modja "Full (strict)": mindket szakasz titkositott,
+# es a Cloudflare ellenorzi is a mi tanusitvanyunkat.
+
+api.feedless.gg {
+    tls /etc/caddy/certs/origin.pem /etc/caddy/certs/origin.key
+
+    encode gzip
+
+    # A "backend" a compose szolgaltatasneve, amit a belso DNS felold.
+    reverse_proxy backend:8080
+
+    log {
+        output stdout
+        format console
+    }
+}
