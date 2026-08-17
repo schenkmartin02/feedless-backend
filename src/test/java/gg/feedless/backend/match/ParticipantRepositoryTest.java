@@ -100,7 +100,9 @@ class ParticipantRepositoryTest {
                 List.of(
                         new PerkStyleDto("primaryStyle", List.of(
                                 new PerkStyleSelectionDto(8112, 0, 0, 0),
-                                new PerkStyleSelectionDto(8126, 0, 0, 0)), 8100),
+                                new PerkStyleSelectionDto(8126, 0, 0, 0),
+                                new PerkStyleSelectionDto(8138, 0, 0, 0),
+                                new PerkStyleSelectionDto(8135, 0, 0, 0)), 8100),
                         new PerkStyleDto("subStyle", List.of(
                                 new PerkStyleSelectionDto(8009, 0, 0, 0),
                                 new PerkStyleSelectionDto(9103, 0, 0, 0)), 8000)));
