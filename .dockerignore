@@ -1,0 +1,35 @@
+# A build context minden fajlt felkuld a Docker daemonnak, mielott barmi epulne.
+# Nekunk ebbol egyetlen fajl kell: a target/*.jar. Minden mas felesleges,
+# lassitja a buildet - es a titkok eseteben egyenesen veszelyes.
+
+# TITKOK - ez a legfontosabb sor ebben a fajlban
+.env
+.env.*
+
+# Verziokezeles es CI
+.git
+.gitignore
+.gitattributes
+.github
+
+# IDE es fejlesztoi kornyezet
+.idea
+*.iml
+.mvn
+mvnw
+mvnw.cmd
+
+# Forras es dokumentacio: a kesz jarban mar benne van minden, ami kell
+src
+docs
+*.md
+
+# A target/ maradeka: csak a repackage-elt jar kell belole
+target/classes
+target/test-classes
+target/generated-sources
+target/generated-test-sources
+target/maven-status
+target/maven-archiver
+target/surefire-reports
+target/*.jar.original
