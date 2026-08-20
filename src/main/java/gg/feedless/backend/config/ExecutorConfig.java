@@ -11,12 +11,12 @@ public class ExecutorConfig {
 
     @Bean
     public ExecutorService matchFetchExecutor() {
-        return Executors.newFixedThreadPool(5);
+        return Executors.newFixedThreadPool(15);
     }
 
     @Bean
     public ExecutorService rankFetchExecutor() {
-        return Executors.newFixedThreadPool(10);
+        return Executors.newFixedThreadPool(20);
     }
 
 }
