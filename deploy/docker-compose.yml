@@ -20,6 +20,9 @@ services:
 
   postgres:
     image: postgres:16          # FIX major verzio: a V29 f_unaccent-je PG 18-on elhasal
+    # A Docker alapertelmezett 64 MB-os /dev/shm-je keves a parhuzamos lekerdezesek
+    # kozos hash tablainak: "could not resize shared memory segment ... No space left
+    # on device". Ez NEM a konteneren beluli memoriakorlat, hanem kulon tmpfs meret.
     restart: unless-stopped
     environment:
       POSTGRES_USER: feedless
@@ -49,6 +52,7 @@ services:
       timeout: 5s
       retries: 5
       start_period: 30s
+    shm_size: 512m
     mem_limit: 3072m
     logging:
       driver: json-file
