@@ -37,11 +37,22 @@ public interface PlayerRankRepository extends JpaRepository<PlayerRank, Long> {
                          @Param("wins") int wins, @Param("losses") int losses);
 
     @Query(value = """
-    SELECT count(*)                                                              \s
-    FROM player_ranks pr                                                         \s
-    JOIN players p ON p.id = pr.player_id                                        \s
-    WHERE pr.queue_type = :queueType                                             \s
-      AND p.platform = :platform
+    SELECT COALESCE((SELECT player_count FROM ranked_player_count
+    WHERE platform = :platform AND queue_type = :queueType), 0)
     """, nativeQuery = true)
-    long getRankedPlayerCount(@Param("queueType") String queue, @Param("platform") String platform);
+    long getRankedPlayerCount(@Param("queueType") String queueType, @Param("platform") String platform);
+
+    @Transactional
+    @Modifying
+    @Query(value = """
+    INSERT INTO ranked_player_count (platform, queue_type, player_count)
+    SELECT p.platform, pr.queue_type, count(*)
+    FROM player_ranks pr
+    JOIN players p ON p.id = pr.player_id
+    GROUP BY p.platform, pr.queue_type
+    ON CONFLICT (platform, queue_type) DO UPDATE
+    SET player_count = EXCLUDED.player_count,
+        updated_at   = now()
+    """, nativeQuery = true)
+    int recomputeRankedPlayerCount();
 }

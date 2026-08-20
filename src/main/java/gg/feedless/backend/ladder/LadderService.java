@@ -81,6 +81,13 @@ public class LadderService {
     }
 
     @Transactional
+    @Scheduled(fixedDelay = 3_600_000, initialDelay = 120_000)
+    public void updateRankedPlayerCount(){
+        int result = playerRankRepository.recomputeRankedPlayerCount();
+        log.info("Ranked player count is updated: {}", result);
+    }
+
+    @Transactional
     @Scheduled(fixedDelay = 86_400_000, initialDelay = 60_000)
     public void updateLadderSnapshot() {
         int insert = rankLeaderboardRepository.insertLadderSnapshot(LocalDate.now());
