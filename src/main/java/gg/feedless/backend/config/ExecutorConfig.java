@@ -11,7 +11,7 @@ public class ExecutorConfig {
 
     @Bean
     public ExecutorService matchFetchExecutor() {
-        return Executors.newFixedThreadPool(15);
+        return Executors.newFixedThreadPool(24);
     }
 
     @Bean
