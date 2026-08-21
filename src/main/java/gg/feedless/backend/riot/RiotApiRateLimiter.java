@@ -16,22 +16,27 @@ import java.util.List;
 public class RiotApiRateLimiter implements ClientHttpRequestInterceptor {
 
     private final Bucket bucket;
+    private final RiotApiMetrics riotApiMetrics;
+    private final String bucketName;
 
     private static final int MAX_RETRIES = 5;
     private static final long DEFAULT_WAIT_SECONDS = 2;
 
-    public RiotApiRateLimiter(int per10Second, int per10Minutes) {
+    public RiotApiRateLimiter(int per10Second, int per10Minutes, String bucketName, RiotApiMetrics riotApiMetrics) {
         Bandwidth secondLimit = Bandwidth.builder().capacity(per10Second)
                 .refillIntervally(per10Second, Duration.ofSeconds(10)).build();
         Bandwidth minuteLimit = Bandwidth.builder().capacity(per10Minutes)
                 .refillIntervally(per10Minutes, Duration.ofMinutes(10)).build();
         this.bucket = Bucket.builder().addLimit(secondLimit).addLimit(minuteLimit).build();
+        this.riotApiMetrics = riotApiMetrics;
+        this.bucketName = bucketName;
     }
 
     @Override
     @NullMarked public ClientHttpResponse intercept(HttpRequest request, byte[] body, ClientHttpRequestExecution execution) throws IOException {
         try {
             bucket.asBlocking().consume(1);
+            riotApiMetrics.recordCall(bucketName);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new IllegalStateException("Interrupted while waiting", e);
@@ -42,6 +47,7 @@ public class RiotApiRateLimiter implements ClientHttpRequestInterceptor {
         if (!response.getStatusCode().equals(HttpStatus.TOO_MANY_REQUESTS)) {
             return response;
         }
+        riotApiMetrics.recordRateLimiter(bucketName);
         while (currentTry < MAX_RETRIES) {
             List<String> getRetry = response.getHeaders().get("Retry-After");
 
@@ -52,6 +58,7 @@ public class RiotApiRateLimiter implements ClientHttpRequestInterceptor {
                     Thread.sleep(DEFAULT_WAIT_SECONDS * 1000);
                 }
                 bucket.asBlocking().consume(1);
+                riotApiMetrics.recordCall(bucketName);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 throw new IllegalStateException("Interrupted while waiting", e);
@@ -61,6 +68,7 @@ public class RiotApiRateLimiter implements ClientHttpRequestInterceptor {
             if (!response.getStatusCode().equals(HttpStatus.TOO_MANY_REQUESTS)) {
                 return response;
             }
+            riotApiMetrics.recordRateLimiter(bucketName);
             currentTry++;
         }
         response.close();
