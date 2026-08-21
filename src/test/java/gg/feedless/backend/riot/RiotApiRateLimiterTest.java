@@ -15,11 +15,16 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class RiotApiRateLimiterTest {
+    private final RiotApiMetrics riotApiMetrics;
+
+    public RiotApiRateLimiterTest(RiotApiMetrics riotApiMetrics) {
+        this.riotApiMetrics = riotApiMetrics;
+    }
 
     @Test
     void returnsResponseWhenRequestSucceeds() throws IOException {
         RiotApiRateLimiter limiter = new RiotApiRateLimiter(100,
-                100);
+                100, "test", riotApiMetrics);
         MockClientHttpRequest request = new
                 MockClientHttpRequest();
         MockClientHttpResponse okResponse = new
@@ -34,7 +39,7 @@ class RiotApiRateLimiterTest {
     @Test
     void retriesUntilSuccess() throws IOException {
         RiotApiRateLimiter limiter = new RiotApiRateLimiter(100,
-                100);
+                100, "test", riotApiMetrics);
         MockClientHttpRequest request = new
                 MockClientHttpRequest();
         MockClientHttpResponse okResponse = new
@@ -54,7 +59,7 @@ class RiotApiRateLimiterTest {
     @Test
     void throwsWhenRetriesExhausted() {
         RiotApiRateLimiter limiter = new RiotApiRateLimiter(100,
-                100);
+                100, "test", riotApiMetrics);
         MockClientHttpRequest request = new
                 MockClientHttpRequest();
         MockClientHttpResponse toManyRequestResponse = new
