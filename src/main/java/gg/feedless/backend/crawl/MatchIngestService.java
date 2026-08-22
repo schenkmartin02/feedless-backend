@@ -1,9 +1,6 @@
 package gg.feedless.backend.crawl;
 
-import gg.feedless.backend.match.Match;
-import gg.feedless.backend.match.MatchRepository;
-import gg.feedless.backend.match.Participant;
-import gg.feedless.backend.match.ParticipantRepository;
+import gg.feedless.backend.match.*;
 import gg.feedless.backend.player.Player;
 import gg.feedless.backend.player.PlayerRepository;
 import gg.feedless.backend.riot.dto.match.BanDto;
@@ -28,12 +25,14 @@ public class MatchIngestService {
     private final MatchRepository matchRepository;
     private final ParticipantRepository participantRepository;
     private final CrawlJobRepository crawlJobRepository;
+    private final MatchTeamRepository matchTeamRepository;
 
-    public MatchIngestService(PlayerRepository playerRepository, MatchRepository matchRepository, ParticipantRepository participantRepository, CrawlJobRepository crawlJobRepository) {
+    public MatchIngestService(PlayerRepository playerRepository, MatchRepository matchRepository, ParticipantRepository participantRepository, CrawlJobRepository crawlJobRepository, MatchTeamRepository matchTeamRepository) {
         this.playerRepository = playerRepository;
         this.matchRepository = matchRepository;
         this.participantRepository = participantRepository;
         this.crawlJobRepository = crawlJobRepository;
+        this.matchTeamRepository = matchTeamRepository;
     }
 
     @Transactional
@@ -71,6 +70,7 @@ public class MatchIngestService {
         Match savedMatch = matchRepository.save(match);
 
         participantRepository.saveAll(buildParticipants(matchId, savedMatch.getId(), participantDtos, playerMap));
+        matchTeamRepository.saveAll(buildMatchTeams(matchId, savedMatch.getId(), teams));
 
         for (String puuid: matchDto.metadata().participants()) {
             crawlJobRepository.enqueue(puuid, 0, platform);
@@ -105,5 +105,17 @@ public class MatchIngestService {
             participantList.add(Participant.from(savedMatchId, playerMap.get(participant.puuid()), participant));
         }
         return participantList;
+    }
+
+    private List<MatchTeam> buildMatchTeams(String matchId, Long savedMatchId, List<TeamDto> teams){
+        List<MatchTeam> matchTeam = new ArrayList<>();
+        for (TeamDto team: teams){
+            if (team.objectives() != null){
+                matchTeam.add(MatchTeam.from(savedMatchId, team));
+            } else {
+                log.warn("Match {} dont have objectives", matchId);
+            }
+        }
+        return matchTeam;
     }
 }

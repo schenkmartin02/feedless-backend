@@ -152,6 +152,15 @@ public class Participant {
     @Column(name = "sub_perk_2", nullable = false)
     private int subPerk2;
 
+    @Column(name = "total_damage_taken")
+    private Integer totalDamageTaken;
+
+    @Column(name = "wards_placed")
+    private Integer wardsPlaced;
+
+    @Column(name = "summoner_level")
+    private Integer summonerLevel;
+
     //JPA-Only
     protected Participant() {
     }
@@ -205,6 +214,9 @@ public class Participant {
         p.primaryPerk4 = dto.perks().styles().getFirst().selections().get(3).perk();
         p.subPerk1 = dto.perks().styles().getLast().selections().getFirst().perk();
         p.subPerk2 = dto.perks().styles().getLast().selections().getLast().perk();
+        p.totalDamageTaken = dto.totalDamageTaken();
+        p.wardsPlaced = dto.wardsPlaced();
+        p.summonerLevel = dto.summonerLevel();
         return p;
     }
 

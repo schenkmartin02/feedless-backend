@@ -8,5 +8,6 @@ public record ParticipantDto(int assists, int baronKills, int champLevel, int ch
                              String puuid, int profileIcon, int quadraKills, String riotIdGameName, String riotIdTagline,
                              int summoner1Id, int summoner2Id,
                              int summonerLevel, int teamId, int totalDamageDealtToChampions,
-                             int totalHeal, int totalMinionsKilled, int tripleKills, int visionScore, boolean win) {
+                             int totalHeal, int totalMinionsKilled, int tripleKills, int visionScore, boolean win,
+                             int totalDamageTaken, int wardsPlaced) {
 }
