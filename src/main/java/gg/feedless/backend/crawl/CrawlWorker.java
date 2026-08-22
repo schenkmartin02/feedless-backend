@@ -80,6 +80,18 @@ public class CrawlWorker {
         tick(RegionType.EUW);
     }
 
+    //Nem végleges TODO: jobbra cserélni majd
+    @Scheduled(fixedDelay = 100)
+    public void crawlerEUNE2(){
+        tick(RegionType.EUNE);
+    }
+
+    @Scheduled(fixedDelay = 100)
+    public void crawlerEUW2(){
+        tick(RegionType.EUW);
+    }
+    // ----
+
     private void tick(RegionType region) {
         Optional<CrawlJob> job = crawlJobRepository.claimNextJob(region.getPlatform());
         if (job.isPresent()) {
