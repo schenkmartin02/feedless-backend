@@ -116,6 +116,6 @@ class ParticipantRepositoryTest {
                 "test-puuid", 1234, 0, "TestPlayer", "EUNE",
                 4, 7,
                 300, 100, 20000,
-                3000, 180, 0, 25, win);
+                3000, 180, 0, 25, win, 1, 1);
     }
 }
