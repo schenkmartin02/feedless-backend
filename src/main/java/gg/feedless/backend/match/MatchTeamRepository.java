@@ -2,6 +2,8 @@ package gg.feedless.backend.match;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 
-public interface MatchTeamRepository extends JpaRepository<MatchTeam, Long> {
+import java.util.List;
 
+public interface MatchTeamRepository extends JpaRepository<MatchTeam, Long> {
+    List<MatchTeam> findByMatchId(Long matchId);
 }

@@ -1,0 +1,40 @@
+package gg.feedless.backend.match;
+
+public interface MatchDetailParticipantView {
+    String getName();
+    String getTag();
+    Integer getChampionId();
+    Integer getTeamId();
+    String getTeamPosition();
+    Boolean getWin();
+    Integer getKills();
+    Integer getDeaths();
+    Integer getAssists();
+    Integer getCs();
+    Integer getDamage();
+    Integer getDamageTaken();
+    Integer getWards();
+    Integer getVisionScore();
+    Integer getGold();
+    Integer getLevel();
+    Integer getItem0();
+    Integer getItem1();
+    Integer getItem2();
+    Integer getItem3();
+    Integer getItem4();
+    Integer getItem5();
+    Integer getItem6();
+    Integer getSummoner1Id();
+    Integer getSummoner2Id();
+    Integer getKeystoneId();
+    Integer getPrimaryPerk2();
+    Integer getPrimaryPerk3();
+    Integer getPrimaryPerk4();
+    Integer getSubPerk1();
+    Integer getSubPerk2();
+    Integer getStatPerkOffense();
+    Integer getStatPerkFlex();
+    Integer getStatPerkDefense();
+    String getTier();
+    String getDivision();
+}

@@ -105,4 +105,54 @@ public interface ParticipantRepository extends JpaRepository<Participant, Long> 
     ORDER BY COUNT(*) DESC, p.champion_id
     """, nativeQuery = true)
     List<PlayerChampionView> findPlayerChampionStats(@Param("playerId") Long playedId, @Param("queueId") int queueId);
+
+    @Query(value = """
+    SELECT pl.game_name                                      AS "name",
+           pl.tag_line                                       AS "tag",
+           p.champion_id                                     AS "championId",
+           p.team_id                                         AS "teamId",
+           p.team_position                                   AS "teamPosition",
+           p.win                                             AS "win",
+           p.kills                                           AS "kills",
+           p.deaths                                          AS "deaths",
+           p.assists                                         AS "assists",
+           p.total_minions_killed + p.neutral_minions_killed AS "cs",
+           p.total_damage_dealt_to_champions                 AS "damage",
+           p.total_damage_taken                              AS "damageTaken",
+           p.wards_placed                                    AS "wards",
+           p.vision_score                                    AS "visionScore",
+           p.gold_earned                                     AS "gold",
+           p.summoner_level                                  AS "level",
+           p.item0 AS "item0", p.item1 AS "item1", p.item2 AS "item2",
+           p.item3 AS "item3", p.item4 AS "item4", p.item5 AS "item5",
+           p.item6 AS "item6",
+           p.summoner1_id                                    AS "summoner1Id",
+           p.summoner2_id                                    AS "summoner2Id",
+           p.keystone_id                                     AS "keystoneId",
+           p.primary_perk_2                                  AS "primaryPerk2",
+           p.primary_perk_3                                  AS "primaryPerk3",
+           p.primary_perk_4                                  AS "primaryPerk4",
+           p.sub_perk_1                                      AS "subPerk1",
+           p.sub_perk_2                                      AS "subPerk2",
+           p.stat_perk_offense                               AS "statPerkOffense",
+           p.stat_perk_flex                                  AS "statPerkFlex",
+           p.stat_perk_defense                               AS "statPerkDefense",
+           pr.tier                                           AS "tier",
+           pr.division                                       AS "division"
+    FROM participants p
+    JOIN players pl ON pl.id = p.player_id
+    LEFT JOIN player_ranks pr ON pr.player_id = p.player_id
+                             AND pr.queue_type = 'RANKED_SOLO_5x5'
+    WHERE p.match_id = :matchRowId
+    ORDER BY p.team_id,
+             CASE p.team_position
+                 WHEN 'TOP' THEN 1
+                 WHEN 'JUNGLE' THEN 2
+                 WHEN 'MIDDLE' THEN 3
+                 WHEN 'BOTTOM' THEN 4
+                 WHEN 'UTILITY' THEN 5
+                 ELSE 6
+             END
+    """, nativeQuery = true)
+    List<MatchDetailParticipantView> findMatchDetailParticipants(@Param("matchRowId") Long matchRowId);
 }

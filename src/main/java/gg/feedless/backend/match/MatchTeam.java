@@ -50,4 +50,39 @@ public class MatchTeam {
         return m;
     }
 
+    public Long getId() {
+        return id;
+    }
+
+    public Long getMatchId() {
+        return matchId;
+    }
+
+    public int getTeamId() {
+        return teamId;
+    }
+
+    public boolean isWin() {
+        return win;
+    }
+
+    public int getBarons() {
+        return barons;
+    }
+
+    public int getDragons() {
+        return dragons;
+    }
+
+    public int getHeralds() {
+        return heralds;
+    }
+
+    public int getTowers() {
+        return towers;
+    }
+
+    public int getInhibitors() {
+        return inhibitors;
+    }
 }
