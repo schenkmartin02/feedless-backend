@@ -123,7 +123,7 @@ public interface ParticipantRepository extends JpaRepository<Participant, Long> 
            p.wards_placed                                    AS "wards",
            p.vision_score                                    AS "visionScore",
            p.gold_earned                                     AS "gold",
-           p.summoner_level                                  AS "level",
+           p.champ_level                                     AS "level",
            p.item0 AS "item0", p.item1 AS "item1", p.item2 AS "item2",
            p.item3 AS "item3", p.item4 AS "item4", p.item5 AS "item5",
            p.item6 AS "item6",
