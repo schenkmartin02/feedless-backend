@@ -41,7 +41,7 @@ crawler:
   recrawl:
     interval-ms: 60000
     ttl-days: 2
-    batch-size: 200
+    batch-size: 400
 
 retention:
   match-days: 30
