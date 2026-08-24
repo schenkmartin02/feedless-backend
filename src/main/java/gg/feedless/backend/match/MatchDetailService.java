@@ -2,17 +2,12 @@ package gg.feedless.backend.match;
 
 import gg.feedless.backend.api.match.*;
 import gg.feedless.backend.riot.ddragon.ChampionCatalog;
-import gg.feedless.backend.stats.QueueNames;
-import gg.feedless.backend.stats.RankLabel;
-import gg.feedless.backend.stats.RegionType;
-import gg.feedless.backend.stats.RoleType;
+import gg.feedless.backend.stats.*;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 @Service
 public class MatchDetailService {
@@ -20,12 +15,18 @@ public class MatchDetailService {
     private final ParticipantRepository participantRepository;
     private final MatchTeamRepository matchTeamRepository;
     private final ChampionCatalog championCatalog;
+    private final RuneStatsRepository runeStatsRepository;
+    private final MatchTimelineService matchTimelineService;
 
-    public MatchDetailService(MatchRepository matchRepository, ParticipantRepository participantRepository, MatchTeamRepository matchTeamRepository, ChampionCatalog championCatalog) {
+    private static final int MIN_GAMES = 100;
+
+    public MatchDetailService(MatchRepository matchRepository, ParticipantRepository participantRepository, MatchTeamRepository matchTeamRepository, ChampionCatalog championCatalog, RuneStatsRepository runeStatsRepository, MatchTimelineService matchTimelineService) {
         this.matchRepository = matchRepository;
         this.participantRepository = participantRepository;
         this.matchTeamRepository = matchTeamRepository;
         this.championCatalog = championCatalog;
+        this.runeStatsRepository = runeStatsRepository;
+        this.matchTimelineService = matchTimelineService;
     }
 
     public Optional<MatchDetailResponse> getMatchDetail(String matchId, RegionType region, String name, String tag){
@@ -94,18 +95,34 @@ public class MatchDetailService {
         }
         MatchDetailTeamResponse blueTeamResponse = new MatchDetailTeamResponse("blue", blueTeamWin, blueTeamObjectivesResponse, blueTeam);
         MatchDetailTeamResponse redTeamResponse = new MatchDetailTeamResponse("red", redTeamWin, redTeamObjectivesResponse, redTeam);
+        Map<String, String> championKeyByPuuid = new HashMap<>();
+        for (MatchDetailParticipantView view: matchDetailParticipantViewsList){
+            championKeyByPuuid.put(view.getPuuid(), championCatalog.getChampionKey(view.getChampionId()));
+        }
+        Optional<MatchTimelinePayload> payload = matchTimelineService.getMatchTimeline(match.get().getId(), matchId, championKeyByPuuid);
         MatchBuildResponse matchBuildResponse;
         if (subject == null){
             matchBuildResponse = null;
         } else {
-            matchBuildResponse = new MatchBuildResponse(null, null, List.of(subject.getKeystoneId(),
+            //TODO: a keystonePickRate felfelé torzít. A rune_stats HAVING COUNT(*) >= 5 rúnaoldalanként
+            //      szűr, így a ritka kulcsrúnák se a számlálóba, se a nevezőbe nem kerülnek be
+            //      (Irelia TOP, 16.16, queue 400: 100%-ot ad a valós 94,1% helyett).
+            //      Javítás: külön, kulcsrúna szintű aggregátum, szigorú küszöb nélkül.
+            Double keystonePickRate = runeStatsRepository.getKeystonePickRate(region.getPlatform(), match.get().getPatch(), match.get().getQueueId(), subject.getChampionId(), subject.getTeamPosition(), subject.getKeystoneId(), MIN_GAMES);
+            List<PurchaseResponse> purchases = null;
+            List<String> skillOrder = null;
+            if (payload.isPresent()){
+                purchases = payload.get().purchases().get(subject.getPuuid());
+                skillOrder = payload.get().skillOrder().get(subject.getPuuid());
+            }
+            matchBuildResponse = new MatchBuildResponse(purchases, skillOrder, List.of(subject.getKeystoneId(),
                     subject.getPrimaryPerk2(), subject.getPrimaryPerk3(), subject.getPrimaryPerk4()),
                     List.of(subject.getSubPerk1(), subject.getSubPerk2()),
-                    List.of(subject.getStatPerkOffense(), subject.getStatPerkFlex(), subject.getStatPerkDefense()), null);
+                    List.of(subject.getStatPerkOffense(), subject.getStatPerkFlex(), subject.getStatPerkDefense()), keystonePickRate);
         }
         Instant playedAt = match.get().getGameStart().toInstant();
         int playedMinutesAgo = Math.toIntExact(Duration.between(playedAt.plusSeconds(match.get().getGameDuration()), Instant.now()).toMinutes());
-        MatchDetailResponse matchDetailResponse = new MatchDetailResponse(match.get().getMatchId(), QueueNames.of(match.get().getQueueId()), match.get().getPatch(), playedAt, playedMinutesAgo, Math.toIntExact(match.get().getGameDuration()), blueTeamWin? "blue" : "red", subjectResponse, null, List.of(blueTeamResponse, redTeamResponse), null, matchBuildResponse);
+        MatchDetailResponse matchDetailResponse = new MatchDetailResponse(match.get().getMatchId(), QueueNames.of(match.get().getQueueId()), match.get().getPatch(), playedAt, playedMinutesAgo, Math.toIntExact(match.get().getGameDuration()), blueTeamWin? "blue" : "red", subjectResponse, null, List.of(blueTeamResponse, redTeamResponse), payload.map(MatchTimelinePayload::timeline).orElse(null), matchBuildResponse);
         return Optional.of(matchDetailResponse);
     }
 

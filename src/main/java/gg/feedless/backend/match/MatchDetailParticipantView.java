@@ -3,6 +3,7 @@ package gg.feedless.backend.match;
 public interface MatchDetailParticipantView {
     String getName();
     String getTag();
+    String getPuuid();
     Integer getChampionId();
     Integer getTeamId();
     String getTeamPosition();

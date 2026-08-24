@@ -85,4 +85,23 @@ public interface RuneStatsRepository extends JpaRepository<RuneStats, Long> {
     RuneStatsView getRuneStats(@Param("platform") String platform, @Param("patch") String patch,
                                @Param("queueId") int queueId, @Param("championId") int championId,
                                @Param("teamPosition") String teamPosition, @Param("tiers") Collection<String> tiers);
+
+    @Query(value = """
+    SELECT CASE
+               WHEN SUM(games) < :minGames THEN NULL
+               ELSE CAST(
+                        ROUND(100.0 * SUM(games) FILTER (WHERE keystone_id = :keystoneId) / SUM(games), 1)
+                        AS DOUBLE PRECISION)
+           END
+    FROM rune_stats
+    WHERE platform      = :platform
+      AND patch         = :patch
+      AND queue_id      = :queueId
+      AND champion_id   = :championId
+      AND team_position = :teamPosition
+    """, nativeQuery = true)
+    Double getKeystonePickRate(@Param("platform") String platform, @Param("patch") String patch,
+                               @Param("queueId") int queueId, @Param("championId") int championId,
+                               @Param("teamPosition") String teamPosition, @Param("keystoneId") int keystoneId,
+                               @Param("minGames") int minGames);
 }

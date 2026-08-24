@@ -6,6 +6,7 @@ import gg.feedless.backend.riot.dto.league.LeagueListDto;
 import gg.feedless.backend.riot.dto.match.MatchDto;
 import gg.feedless.backend.riot.dto.spectator.CurrentGameDto;
 import gg.feedless.backend.riot.dto.summoner.SummonerDto;
+import gg.feedless.backend.riot.dto.timeline.TimelineDto;
 import gg.feedless.backend.stats.QueueType;
 import gg.feedless.backend.stats.RegionType;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -121,6 +122,18 @@ public class RiotApiClient {
             }
         }
         return Optional.empty();
+    }
+
+    public Optional<TimelineDto> getMatchTimeLineByMatchId(String matchId){
+        try {
+                return Optional.ofNullable(europeApi.get().uri("/lol/match/v5/matches/{matchId}/timeline", matchId).retrieve().body(TimelineDto.class));
+        } catch (HttpClientErrorException error) {
+            if (error.getStatusCode().equals(HttpStatus.NOT_FOUND)) {
+                return Optional.empty();
+            } else {
+                throw error;
+            }
+        }
     }
 
     private RestClient getRestClientByRegion(String region) {

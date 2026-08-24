@@ -109,6 +109,7 @@ public interface ParticipantRepository extends JpaRepository<Participant, Long> 
     @Query(value = """
     SELECT pl.game_name                                      AS "name",
            pl.tag_line                                       AS "tag",
+           pl.puuid                                          AS "puuid",
            p.champion_id                                     AS "championId",
            p.team_id                                         AS "teamId",
            p.team_position                                   AS "teamPosition",
