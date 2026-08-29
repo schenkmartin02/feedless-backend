@@ -57,7 +57,7 @@ stats:
       interval-ms: 300000
     delay:
       rune-ms:      900000       # 15 perc
-      ban-ms:      1500000       # 45 perc
+      ban-ms:      2700000       # 45 perc
       champion-snapshot-ms: 600000
       ban-snapshot-ms: 1800000
 

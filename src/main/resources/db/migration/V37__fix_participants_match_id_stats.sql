@@ -1,0 +1,1 @@
+ALTER TABLE participants ALTER COLUMN match_id SET (n_distinct = -0.1);
