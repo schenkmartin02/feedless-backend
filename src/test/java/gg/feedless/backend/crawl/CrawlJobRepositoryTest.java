@@ -106,7 +106,7 @@ class CrawlJobRepositoryTest {
         testJob3.setLastCrawledAt(OffsetDateTime.now().minusDays(2));
         crawlJobRepository.save(testJob3);
 
-        int resultSum = crawlJobRepository.scheduleRecrawl(OffsetDateTime.now().minusDays(1), 1);
+        int resultSum = crawlJobRepository.scheduleRecrawl(1);
         Optional<CrawlJob> result = crawlJobRepository.findByPuuid("recovery");
         Optional<CrawlJob> result2 = crawlJobRepository.findByPuuid("recovery2");
         Optional<CrawlJob> result3 = crawlJobRepository.findByPuuid("recovery3");
