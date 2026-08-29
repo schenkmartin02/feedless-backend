@@ -33,6 +33,12 @@ public class CrawlJob {
     @Column(name = "started_at")
     private OffsetDateTime startedAt;
 
+    @Column(name = "next_crawl_at")
+    private OffsetDateTime nextCrawlAt;
+
+    @Column(name = "idle_streak")
+    private int idleStreak;
+
     @Column(name = "created_at", nullable = false)
     private OffsetDateTime createdAt;
 
@@ -105,5 +111,21 @@ public class CrawlJob {
 
     public void setPlatform(String platform) {
         this.platform = platform;
+    }
+
+    public int getIdleStreak() {
+        return idleStreak;
+    }
+
+    public void setIdleStreak(int idleStreak) {
+        this.idleStreak = idleStreak;
+    }
+
+    public OffsetDateTime getNextCrawlAt() {
+        return nextCrawlAt;
+    }
+
+    public void setNextCrawlAt(OffsetDateTime nextCrawlAt) {
+        this.nextCrawlAt = nextCrawlAt;
     }
 }

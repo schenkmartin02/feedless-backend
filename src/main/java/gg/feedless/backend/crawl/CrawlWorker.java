@@ -97,8 +97,8 @@ public class CrawlWorker {
         if (job.isPresent()) {
             CrawlJob claimed = job.get();
             try {
-
                 log.info("Claimed job for puuid {}, region {}", claimed.getPuuid(), region.name());
+                int priority = claimed.getPriority();
                 Optional<Player> account = playerRepository.findByPuuid(claimed.getPuuid());
                 if (account.isEmpty()) {
                     account = Optional.of(new Player(claimed.getPuuid()));
@@ -147,7 +147,14 @@ public class CrawlWorker {
                 List<String> newMatchIdList = matchList.stream()
                         .filter(matchId -> !existingMatchIds.contains(matchId))
                         .toList().reversed();
-
+                boolean activePlayer = !newMatchIdList.isEmpty() || claimed.getLastCrawledAt() != null && existMatchList.stream().anyMatch(m -> m.getGameStart().isAfter(claimed.getLastCrawledAt()));
+                if (activePlayer) {
+                    claimed.setIdleStreak(0);
+                }
+                if (!activePlayer && priority <= 1) {
+                    claimed.setIdleStreak(Math.min(claimed.getIdleStreak() + 1, 4));
+                }
+                claimed.setNextCrawlAt(OffsetDateTime.now().plusDays((long) recrawlTTLInDays * (1L << claimed.getIdleStreak())));
                 List<Future<MatchDto>> matchFutureList = new ArrayList<>();
                 for (String matchId: newMatchIdList){
                     matchFutureList.add(matchExecutorService.submit(() -> riotApiClient.getMatchByMatchId(matchId)));
@@ -195,7 +202,7 @@ public class CrawlWorker {
     @Transactional
     @Scheduled(fixedDelayString = "${crawler.recrawl.interval-ms}")
     public void scheduleRecrawl() {
-        int result = crawlJobRepository.scheduleRecrawl(OffsetDateTime.now().minusDays(recrawlTTLInDays), batchSize);
+        int result = crawlJobRepository.scheduleRecrawl(batchSize);
         if (result > 0) {
             log.info("Reset {} stale crawl jobs to new crawling", result);
         }

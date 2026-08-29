@@ -5,7 +5,7 @@ spring:
   task:
     scheduling:
       pool:
-        size: 8
+        size: 14
 
   datasource:
     url: jdbc:postgresql://${DB_HOST:localhost}:5432/feedless
