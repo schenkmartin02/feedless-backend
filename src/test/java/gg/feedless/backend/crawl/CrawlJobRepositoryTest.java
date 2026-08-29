@@ -94,16 +94,17 @@ class CrawlJobRepositoryTest {
     void scheduleRecrawl() {
         CrawlJob testJob = new CrawlJob("recovery", 0, "EUN1");
         testJob.setStatus(CrawlStatus.DONE);
+        testJob.setNextCrawlAt(OffsetDateTime.now().plusDays(2));
         crawlJobRepository.save(testJob);
 
         CrawlJob testJob2 = new CrawlJob("recovery2", 0, "EUN1");
         testJob2.setStatus(CrawlStatus.DONE);
-        testJob2.setLastCrawledAt(OffsetDateTime.now().minusDays(2));
+        testJob2.setNextCrawlAt(OffsetDateTime.now().minusDays(1));
         crawlJobRepository.save(testJob2);
 
         CrawlJob testJob3 = new CrawlJob("recovery3", 0, "EUN1");
         testJob3.setStatus(CrawlStatus.DONE);
-        testJob3.setLastCrawledAt(OffsetDateTime.now().minusDays(2));
+        testJob3.setNextCrawlAt(OffsetDateTime.now().minusHours(1));
         crawlJobRepository.save(testJob3);
 
         int resultSum = crawlJobRepository.scheduleRecrawl(1);
