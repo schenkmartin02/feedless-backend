@@ -51,6 +51,7 @@ public class CrawlJob {
         this.priority = priority;
         this.createdAt = OffsetDateTime.now();
         this.platform = platform;
+        this.nextCrawlAt = OffsetDateTime.now();
     }
 
     public Long getId() {
