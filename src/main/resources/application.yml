@@ -5,7 +5,7 @@ spring:
   task:
     scheduling:
       pool:
-        size: 14
+        size: 8
 
   datasource:
     url: jdbc:postgresql://${DB_HOST:localhost}:5432/feedless
@@ -34,6 +34,7 @@ riot:
     per-10-minutes: 30000
 
 crawler:
+  workers: 6
   max-retries: 5
   refresh:
     cooldown-minutes: 5

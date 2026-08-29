@@ -11,6 +11,8 @@ import gg.feedless.backend.riot.dto.league.LeagueEntryDto;
 import gg.feedless.backend.riot.dto.match.MatchDto;
 import gg.feedless.backend.riot.dto.summoner.SummonerDto;
 import gg.feedless.backend.stats.RegionType;
+import jakarta.annotation.PostConstruct;
+import jakarta.annotation.PreDestroy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -28,6 +30,7 @@ import java.util.*;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 @Service
@@ -45,17 +48,21 @@ public class CrawlWorker {
 
     private final ExecutorService matchExecutorService;
     private final ExecutorService rankExecutorService;
+    private final ExecutorService crawlExecutorService;
 
     private final int profileTTLInDays;
     private final int recrawlTTLInDays;
     private final int batchSize;
     private final int maxRetries;
+    private final int workers;
+
+    private volatile boolean running = true;
 
     private static final int NEW_CRAWL_MATCH_LIST = 20;
     private static final int RE_CRAWL_MATCH_LIST = 100;
     private static final int MATCH_LIST_START_TIME = 30;
 
-    public CrawlWorker(CrawlJobRepository crawlJobRepository, RiotApiClient riotApiClient, PlayerRepository playerRepository, PlayerRankRepository playerRankRepository, MatchRepository matchRepository, MatchIngestService matchIngestService, @Value("${crawler.profile-refresh-ttl-days}") int profileTTLInDays, @Value("${crawler.recrawl.ttl-days}") int recrawlTTLInDays, @Value("${crawler.recrawl.batch-size}") int batchSize, @Qualifier("matchFetchExecutor") ExecutorService matchExecutorService, @Qualifier("rankFetchExecutor") ExecutorService rankExecutorService, @Value("${crawler.max-retries}") int maxRetries) {
+    public CrawlWorker(CrawlJobRepository crawlJobRepository, RiotApiClient riotApiClient, PlayerRepository playerRepository, PlayerRankRepository playerRankRepository, MatchRepository matchRepository, MatchIngestService matchIngestService, @Value("${crawler.profile-refresh-ttl-days}") int profileTTLInDays, @Value("${crawler.recrawl.ttl-days}") int recrawlTTLInDays, @Value("${crawler.recrawl.batch-size}") int batchSize, @Qualifier("matchFetchExecutor") ExecutorService matchExecutorService, @Qualifier("rankFetchExecutor") ExecutorService rankExecutorService, @Value("${crawler.max-retries}") int maxRetries, @Qualifier("crawlExecutor") ExecutorService crawlExecutorService, @Value("${crawler.workers}") int workers) {
         this.crawlJobRepository = crawlJobRepository;
         this.riotApiClient = riotApiClient;
         this.playerRepository = playerRepository;
@@ -68,36 +75,64 @@ public class CrawlWorker {
         this.matchExecutorService = matchExecutorService;
         this.rankExecutorService = rankExecutorService;
         this.maxRetries = maxRetries;
+        this.crawlExecutorService = crawlExecutorService;
+        this.workers = workers;
     }
 
-    @Scheduled(fixedDelay = 100)
-    public void crawlerEUNE(){
-        tick(RegionType.EUNE);
+    private void workerRunner(RegionType primaryRegion, RegionType secondaryRegion, int workerNumber){
+        while (running) {
+            try {
+                boolean primaryRegionJobFound = tick(primaryRegion, workerNumber);
+                boolean secondaryRegionJobFound = true;
+                if (!primaryRegionJobFound) {
+                    secondaryRegionJobFound = tick(secondaryRegion, workerNumber);
+                }
+                if (!secondaryRegionJobFound) {
+                    Thread.sleep(300);
+                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                log.error("Workers thread interrupted: ", e);
+                return;
+            } catch (Exception e) {
+                log.warn("Workers exception: ", e);
+            }
+        }
     }
 
-    @Scheduled(fixedDelay = 100)
-    public void crawlerEUW(){
-        tick(RegionType.EUW);
+    @PostConstruct
+    public void startWorkers(){
+        for (int i = 0; i < workers; i++) {
+            int finalI = i + 1;
+            if (i % 2 == 1){
+                crawlExecutorService.submit(() -> workerRunner(RegionType.EUNE, RegionType.EUW, finalI));
+            } else {
+                crawlExecutorService.submit(() -> workerRunner(RegionType.EUW, RegionType.EUNE, finalI));
+            }
+        }
     }
 
-    //Nem végleges TODO: jobbra cserélni majd
-    @Scheduled(fixedDelay = 100)
-    public void crawlerEUNE2(){
-        tick(RegionType.EUNE);
+    @PreDestroy
+    public void stopWorkers(){
+        try {
+            running = false;
+            crawlExecutorService.shutdown();
+            boolean shutdown = crawlExecutorService.awaitTermination(20, TimeUnit.SECONDS);
+            if (!shutdown) {
+                crawlExecutorService.shutdownNow();
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            crawlExecutorService.shutdownNow();
+        }
     }
 
-    @Scheduled(fixedDelay = 100)
-    public void crawlerEUW2(){
-        tick(RegionType.EUW);
-    }
-    // ----
-
-    private void tick(RegionType region) {
+    private boolean tick(RegionType region, int workerNumber) {
         Optional<CrawlJob> job = crawlJobRepository.claimNextJob(region.getPlatform());
         if (job.isPresent()) {
             CrawlJob claimed = job.get();
             try {
-                log.info("Claimed job for puuid {}, region {}", claimed.getPuuid(), region.name());
+                log.info("Worker {}: Claimed job for puuid {}, region {}", workerNumber, claimed.getPuuid(), region.name());
                 int priority = claimed.getPriority();
                 Optional<Player> account = playerRepository.findByPuuid(claimed.getPuuid());
                 if (account.isEmpty()) {
@@ -114,7 +149,7 @@ public class CrawlWorker {
                             claimed.setStatus(CrawlStatus.PENDING);
                         }
                         crawlJobRepository.save(claimed);
-                        return;
+                        return true;
                     }
                     Player finalAccount = account.get();
                     Optional<SummonerDto> summonerInfo = riotApiClient.getSummonerByPuuid(finalAccount.getPlatform() ,claimed.getPuuid());
@@ -165,7 +200,7 @@ public class CrawlWorker {
                     } catch (InterruptedException e) {
                         log.error("Match: {} letöltése sikertelen", newMatchIdList.get(i), e);
                         Thread.currentThread().interrupt();
-                        return;
+                        return true;
                     } catch (ExecutionException e) {
                         log.warn("Match: {} letöltése sikertelen", newMatchIdList.get(i), e);
                     }
@@ -196,6 +231,9 @@ public class CrawlWorker {
                 }
                 crawlJobRepository.save(claimed);
             }
+            return true;
+        } else {
+            return false;
         }
     }
 
