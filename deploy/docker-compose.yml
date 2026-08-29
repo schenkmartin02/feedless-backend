@@ -1,9 +1,19 @@
-# Eles compose - 4 vCPU / 8 GB RAM / 80 GB SSD.
+# Eles compose - 4 vCPU / 8 GB RAM / 80 GB rendszerlemez.
+#
+# Az ADATBAZIS NEM a rendszerlemezen van, hanem egy kulon 150 GB-os Hetzner
+# Volume-on, bind mountkent:  /mnt/HC_Volume_106695092/pgdata
+# Ha ez az utvonal nincs felcsatolva (hianyzo fstab sor, lecsatolt volume),
+# a Postgres egy URES adatbazist inicializal ra es latszolag hibatlanul elindul,
+# mikozben a valodi adat erintetlenul all a lecsatolt koteten. Ellenorzes:
+#   df -h | grep HC_Volume  es  grep HC_Volume /etc/fstab
 #
 # A memoria-felosztas szandekos, es osszefugg egymassal:
-#   postgres 3 GB + backend 2 GB + redis 0.38 GB + caddy 0.13 GB = ~5.5 GB
-#   marad ~2.5 GB az operacios rendszernek es a lemez-gyorsitotarnak (page cache),
-#   amibol a Postgres olvas. Ha barmelyik limitet emeled, valahonnan el kell venni.
+#   postgres 5 GB + backend 2 GB + redis 0.38 GB + caddy 0.13 GB = ~7.5 GB a 7.6-bol
+#
+# Ez a LIMITEK osszege, nem foglalas: a Postgres jelenleg ~3.6 GB-ot hasznal az 5-bol,
+# a tobbi page cache marad, amibol ugyancsak a Postgres olvas. Ha viszont barmelyik
+# kontener tenylegesen kimeriti a limitjet, a page cache osszeszorul es a gep swappolni
+# kezd. Emeles elott nezd meg a `free -h` buff/cache es available ertekeit.
 #
 # A felezo szabaly, amivel ezek az ertekek szamolva vannak:
 #   shared_buffers ~ RAM/4, JVM limit ~ RAM/3, effective_cache_size ~ shared_buffers + szabad RAM.
@@ -45,7 +55,7 @@ services:
       - -c
       - max_wal_size=4GB                # ritkabb checkpoint a folyamatos ingest alatt
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - /mnt/HC_Volume_106695092/pgdata:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U feedless -d feedless"]
       interval: 10s
@@ -53,7 +63,7 @@ services:
       retries: 5
       start_period: 30s
     shm_size: 512m
-    mem_limit: 3072m
+    mem_limit: 5120m
     logging:
       driver: json-file
       options:
@@ -121,6 +131,7 @@ services:
       start_period: 90s
     # A portot NEM publikaljuk: a backendhez csak a caddy fer hozza a belso halozaton.
     mem_limit: 2048m
+    stop_grace_period: 30s
     logging:
       driver: json-file
       options:
@@ -147,6 +158,5 @@ services:
         max-file: "3"
 
 volumes:
-  postgres_data:
   caddy_data:
   caddy_config:
