@@ -1,0 +1,454 @@
+# A nyilvános fejlesztési napló forrása. A GET /changelog ebből épül fel.
+#
+# Szerkesztés: ez a fájl a repóban él, tehát egy változtatás commit + deploy.
+#
+# Szabályok:
+#   - minden nyelvfüggő mező alatt "hu" és "en" kulcs áll
+#   - hiányzó nyelv esetén a backend a meglévőt küldi vissza
+#   - üres leírás: a kulcs után NE írj semmit (= null), ne ""
+#   - a dátumok idézőjelben, különben a YAML időbélyeggé alakítja őket
+#   - a "releases" lista a LEGFRISSEBBEL kezdődik
+#   - a "milestones" lista IDŐRENDBEN áll, az utolsó elem a jelen
+
+startedAt: "2026-07-14"
+
+upcoming:
+  version: "v1.0"
+  eta:
+    year: 2026
+    season: autumn
+
+releases:
+
+  - version: "v0.10"
+    releasedAt: "2026-08-30"
+    title:
+      hu: "Fejlesztési napló és útiterv"
+      en: "Changelog and roadmap"
+    changes:
+      - type: new
+        title:
+          hu: "Fejlesztési napló oldal"
+          en: "Changelog page"
+        description:
+          hu: "Végigkövethető, mi változott az egyes kiadásokban, és mi van soron."
+          en: "Follow what changed in each release and what is coming next."
+  - version: "v0.9"
+    releasedAt: "2026-08-29"
+    title:
+      hu: "Gyorsabb crawler és aggregáció"
+      en: "Faster crawler and aggregation"
+    changes:
+      - type: fix
+        title:
+          hu: "Az aggregáció 45 percről másfélre gyorsult"
+          en: "Aggregation dropped from 45 minutes to 90 seconds"
+        description:
+          hu: >-
+            Egy hibás adatbázis-statisztika miatt a statisztikaszámítás rossz
+            végrehajtási tervet kapott, és a teljes meccstáblát végigolvasta.
+          en: >-
+            A wrong database statistic made the stats computation pick a bad
+            execution plan and scan the entire match table.
+      - type: improvement
+        title:
+          hu: "Dedikált szálkészlet a crawlernek"
+          en: "Dedicated thread pool for the crawler"
+        description:
+          hu: "Az ütemezett tickeket saját worker pool váltotta fel, így a régiók nem akadályozzák egymást."
+          en: "Scheduled ticks were replaced by a dedicated worker pool, so regions no longer block each other."
+      - type: improvement
+        title:
+          hu: "Inaktív játékosok ritkább frissítése"
+          en: "Inactive players are refreshed less often"
+        description:
+          hu: "Aki hosszabb ideje nem játszott, egyre ritkábban kerül sorra — így az aktív fiókok adata frissebb."
+          en: "Players who have not played in a while come up less and less often, keeping active accounts fresher."
+
+  - version: "v0.8"
+    releasedAt: "2026-08-24"
+    title:
+      hu: "Meccs részletek és idővonal"
+      en: "Match details and timeline"
+    changes:
+      - type: new
+        title:
+          hu: "Meccs részletes oldal"
+          en: "Match detail page"
+        description:
+          hu: "Csapatonkénti célpontok, és mind a tíz játékos statisztikája, tárgyai és rúnái."
+          en: "Per-team objectives plus stats, items and runes for all ten players."
+      - type: new
+        title:
+          hu: "Meccs idővonal"
+          en: "Match timeline"
+        description:
+          hu: "Ölések, tárgyvásárlások és képzettségek időrendben, igény szerint letöltve."
+          en: "Kills, item purchases and skill-ups in order, fetched on demand."
+      - type: improvement
+        title:
+          hu: "Gyorsabb champion oldal"
+          en: "Faster champions page"
+        description:
+          hu: "Egy hiányzó index miatt minden kérés végigolvasta a meccstáblát; 11 másodpercről 0,3-ra csökkent."
+          en: "A missing index made every request scan the match table; the page went from 11 seconds to 0.3."
+      - type: fix
+        title:
+          hu: "Helyes champion szint a meccs részleteknél"
+          en: "Correct champion level in match details"
+        description:
+
+  - version: "v0.7"
+    releasedAt: "2026-08-21"
+    title:
+      hu: "Teljesítmény és mérés"
+      en: "Performance and metrics"
+    changes:
+      - type: improvement
+        title:
+          hu: "A ranglista 5 másodpercről 0,2-re gyorsult"
+          en: "The ladder went from 5 seconds to 0.2"
+        description:
+          hu: "A rangsorolt játékosok száma előre ki van számolva, nem kérésenként."
+          en: "The ranked player count is precomputed instead of counted on every request."
+      - type: new
+        title:
+          hu: "Riot API kihasználtság mérése"
+          en: "Riot API usage metrics"
+        description:
+          hu: "Vödrönkénti hívásszám és rate limit kihasználtság a naplóban."
+          en: "Per-bucket call counts and rate limit usage in the logs."
+
+  - version: "v0.6"
+    releasedAt: "2026-08-17"
+    title:
+      hu: "Élesbe állás"
+      en: "Into production"
+    changes:
+      - type: new
+        title:
+          hu: "Az api.feedless.gg élesben"
+          en: "api.feedless.gg is live"
+        description:
+          hu: "Saját szerver, automatikus telepítés és HTTPS."
+          en: "Own server, automated deploys and HTTPS."
+      - type: new
+        title:
+          hu: "Automatikus build és teszt"
+          en: "Automated build and tests"
+        description:
+      - type: improvement
+        title:
+          hu: "Idegen régiók kiszűrése"
+          en: "Foreign regions filtered out"
+        description:
+          hu: "A crawler már nem tölti le a török és orosz meccseket, amikhez nincs rangadat."
+          en: "The crawler no longer downloads Turkish and Russian matches, which have no rank data."
+      - type: fix
+        title:
+          hu: "A kulcs lejárata nem öli meg a várólistát"
+          en: "Key expiry no longer kills the queue"
+        description:
+          hu: "Csak a jobhoz köthető hibák számítanak sikertelenségnek, a szolgáltatáskimaradás nem."
+          en: "Only job-specific errors count as failures; outages do not."
+
+  - version: "v0.5"
+    releasedAt: "2026-08-12"
+    title:
+      hu: "Profilok és meccstörténet"
+      en: "Profiles and match history"
+    changes:
+      - type: new
+        title:
+          hu: "Profil oldal"
+          en: "Profile page"
+        description:
+          hu: "Rang, szint és ikon Riot ID alapján."
+          en: "Rank, level and icon by Riot ID."
+      - type: new
+        title:
+          hu: "Meccstörténet lapozással"
+          en: "Paged match history"
+        description:
+      - type: new
+        title:
+          hu: "Profil champion statisztikák"
+          en: "Per-profile champion statistics"
+        description:
+      - type: new
+        title:
+          hu: "Élő meccs"
+          en: "Live game"
+        description:
+          hu: "Ha valaki épp játszik, látszik a felállás és a rangok."
+          en: "If someone is in game, you see the lineup and their ranks."
+      - type: new
+        title:
+          hu: "Játékos kereső"
+          en: "Player search"
+        description:
+      - type: new
+        title:
+          hu: "Frissítés gomb"
+          en: "Refresh button"
+        description:
+          hu: "Ismeretlen vagy elavult profil azonnal lekérhető a Riot API-ról."
+          en: "An unknown or stale profile can be fetched from the Riot API on demand."
+
+  - version: "v0.4"
+    releasedAt: "2026-08-07"
+    title:
+      hu: "Ranglista és napi trendek"
+      en: "Ladder and daily trends"
+    changes:
+      - type: new
+        title:
+          hu: "Ranglista"
+          en: "Ladder"
+        description:
+          hu: "Challenger és Grandmaster, KDA-val és a legtöbbet játszott championökkel."
+          en: "Challenger and Grandmaster with KDA and most played champions."
+      - type: new
+        title:
+          hu: "Napi helyezésváltozás"
+          en: "Daily rank movement"
+        description:
+          hu: "Napi pillanatképből számolt fel-le mozgás a ranglistán."
+          en: "Up and down movement computed from a daily snapshot."
+      - type: new
+        title:
+          hu: "Oldalstatisztika"
+          en: "Site counter"
+        description:
+      - type: improvement
+        title:
+          hu: "Kötegelt statisztikaszámítás"
+          en: "Batched stats computation"
+        description:
+      - type: improvement
+        title:
+          hu: "30 napnál régebbi meccsek törlése"
+          en: "Matches older than thirty days are dropped"
+        description:
+
+  - version: "v0.3"
+    releasedAt: "2026-08-01"
+    title:
+      hu: "Champion statisztikák"
+      en: "Champion statistics"
+    changes:
+      - type: new
+        title:
+          hu: "Champion lista és részletek"
+          en: "Champion list and details"
+        description:
+          hu: "Nyerési és választási arány patchenként, régiónként és rangsávonként."
+          en: "Win and pick rates by patch, region and rank bracket."
+      - type: new
+        title:
+          hu: "Kiemelt championök"
+          en: "Featured champions"
+        description:
+      - type: new
+        title:
+          hu: "Tier és napi trend"
+          en: "Tier and daily trend"
+        description:
+      - type: new
+        title:
+          hu: "Tiltási arány"
+          en: "Ban rate"
+        description:
+      - type: improvement
+        title:
+          hu: "Rangok automatikus feltöltése"
+          en: "Automatic rank backfill"
+        description:
+
+  - version: "v0.2"
+    releasedAt: "2026-07-30"
+    title:
+      hu: "Crawler és statisztika-alapok"
+      en: "Crawler and stats foundations"
+    changes:
+      - type: new
+        title:
+          hu: "Meccsgyűjtő crawler"
+          en: "Match crawler"
+        description:
+          hu: "Várólistából dolgozik: játékos, meccslista, új meccsek, majd az ismeretlen játékosok vissza a sorba."
+          en: "Works from a queue: player, match list, new matches, then unknown players back into the queue."
+      - type: new
+        title:
+          hu: "Champion, tárgy, rúna és matchup aggregáció"
+          en: "Champion, item, rune and matchup aggregation"
+        description:
+      - type: improvement
+        title:
+          hu: "Párhuzamos meccsletöltés"
+          en: "Parallel match downloads"
+        description:
+
+  - version: "v0.1"
+    releasedAt: "2026-07-19"
+    title:
+      hu: "Az alapok"
+      en: "The foundations"
+    changes:
+      - type: new
+        title:
+          hu: "Riot API kliens rate limiterrel"
+          en: "Riot API client with a rate limiter"
+        description:
+          hu: "Minden kimenő hívás egy központi limiteren megy át, ami tiszteletben tartja a Riot korlátait."
+          en: "Every outgoing call goes through a central limiter that respects Riot's quotas."
+      - type: new
+        title:
+          hu: "Adatbázis séma és migrációk"
+          en: "Database schema and migrations"
+        description:
+
+milestones:
+
+  - period:
+      year: 2026
+      month: 7
+    title:
+      hu: "A projekt indul"
+      en: "The project starts"
+    description:
+      hu: "Első Riot API hívás, rate limiter és az adatbázis sémája."
+      en: "First Riot API call, rate limiter and the database schema."
+    version: "v0.1"
+
+  - period:
+      year: 2026
+      month: 7
+    title:
+      hu: "Crawler és statisztikák"
+      en: "Crawler and statistics"
+    description:
+      hu: "Saját meccsgyűjtés, és az első aggregált számok belőle."
+      en: "Our own match collection, and the first aggregated numbers from it."
+    version: "v0.2"
+
+  - period:
+      year: 2026
+      month: 8
+    title:
+      hu: "Champion statisztikák élnek"
+      en: "Champion statistics go live"
+    description:
+      hu: "Nyerési arány, tier és napi trend patchenként."
+      en: "Win rate, tier and daily trend, per patch."
+    version: "v0.3"
+
+  - period:
+      year: 2026
+      month: 8
+    title:
+      hu: "Profilok és meccstörténet"
+      en: "Profiles and match history"
+    description:
+      hu: "Bármelyik játékos kikereshető, a profilja igény szerint frissül."
+      en: "Any player can be looked up, and their profile refreshes on demand."
+    version: "v0.5"
+
+  - period:
+      year: 2026
+      month: 8
+    title:
+      hu: "Élesbe állás"
+      en: "Into production"
+    description:
+      hu: "Az api.feedless.gg saját szerveren fut, automatikus telepítéssel — egyelőre zárt körben."
+      en: "api.feedless.gg runs on its own server with automated deploys — closed beta for now."
+    version: "v0.6"
+
+  - period:
+      year: 2026
+      month: 8
+    title:
+      hu: "Meccs részletek és teljesítmény"
+      en: "Match details and performance"
+    description:
+      hu: "Részletes meccsoldal idővonallal, és nagyságrendekkel gyorsabb lekérdezések."
+      en: "A detailed match page with a timeline, and queries that are orders of magnitude faster."
+    version: "v0.9"
+
+roadmap:
+
+  - stage: now
+    title:
+      hu: "Riot éles kulcs"
+      en: "Riot production key"
+    note:
+      hu: "Kérvény elbírálás alatt"
+      en: "Application under review"
+    progress: 60
+
+  - stage: now
+    title:
+      hu: "Gyorsabb statisztika-újraszámolás"
+      en: "Faster stats recomputation"
+    note:
+      hu: "Tervezés kész"
+      en: "Design done"
+    progress: 25
+
+  - stage: next
+    title:
+      hu: "Összesített régió a statisztikákhoz"
+      en: "Combined region for statistics"
+    note:
+      hu: "EUNE és EUW egyben, nagyobb mintával."
+      en: "EUNE and EUW together, on a larger sample."
+    progress:
+
+  - stage: next
+    title:
+      hu: "Adatbázis particionálás"
+      en: "Database partitioning"
+    note:
+      hu: "A régi meccsek törlése így töredék költséggel járna."
+      en: "Dropping old matches would cost a fraction of what it does today."
+    progress:
+
+  - stage: next
+    title:
+      hu: "Admin felület"
+      en: "Admin panel"
+    note:
+      hu: "Használati statisztikák és tartalomkezelés egy helyen."
+      en: "Usage statistics and content management in one place."
+    progress:
+
+  - stage: later
+    title:
+      hu: "További régiók"
+      en: "More regions"
+    note:
+    progress:
+
+  - stage: later
+    title:
+      hu: "Felhasználói fiókok"
+      en: "User accounts"
+    note:
+    progress:
+
+  - stage: later
+    title:
+      hu: "Champion build ajánlások"
+      en: "Champion build guides"
+    note:
+    progress:
+
+nextEta:
+  year: 2026
+  quarter: 4
+
+# TODO: töltsd ki vagy vedd ki az egész "community" blokkot (akkor null lesz).
+# community:
+#  discord: "https://discord.gg/CSEREL-KI"
+#  issues: "https://github.com/schenkmartin02/feedless-backend/issues"
