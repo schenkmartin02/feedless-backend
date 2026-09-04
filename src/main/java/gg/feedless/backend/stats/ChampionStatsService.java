@@ -163,7 +163,7 @@ public class ChampionStatsService {
 
         List<MatchupStatsView> matchups = matchupStatsRepository.getMatchupStats(region.getPlatform(), patch, queueId, championId, actualStats.getTeamPosition(), tiers, MIN_MATCHUP_GAMES);
 
-        int take = Math.min(3, matchups.size() / 2);
+        int take = Math.min(10, matchups.size() / 2);
 
         List<MatchupStatsView> strongAgainst = matchups.subList(0, take);
         List<MatchupStatsView> weakAgainst = matchups.reversed().subList(0, take);

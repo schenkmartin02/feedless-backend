@@ -110,7 +110,7 @@ public class PlayerLiveService {
                 }
                 rank = RankLabel.of(entry.tier(), entry.rank());
             }
-            LivePlayerResponse livePlayerResponse = new LivePlayerResponse(name, tag, championCatalog.getChampionKey(participantDto.championId()), rank, winRate, games, Objects.equals(participantDto.puuid(), subjectPuuid));
+            LivePlayerResponse livePlayerResponse = new LivePlayerResponse(name, tag, participantDto.profileIconId(), championCatalog.getChampionKey(participantDto.championId()), participantDto.spell1Id(), participantDto.spell2Id(), participantDto.perks(), participantDto.lastSelectedSkinIndex(), rank, winRate, games, Objects.equals(participantDto.puuid(), subjectPuuid));
             if (participantDto.teamId() == 100){
                 bluePlayers.add(livePlayerResponse);
             } else {
