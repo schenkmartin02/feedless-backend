@@ -47,7 +47,7 @@ public class LadderService {
         this.championCatalog = championCatalog;
     }
 
-    @Scheduled(fixedDelay = 600_000)
+    @Scheduled(fixedDelay = 600_000, scheduler = "batchScheduler")
     public void recomputeRankLadder(){
         for(RegionType region: RegionType.values()){
             for(QueueType queue: QueueType.values()){
@@ -81,14 +81,14 @@ public class LadderService {
     }
 
     @Transactional
-    @Scheduled(fixedDelay = 3_600_000, initialDelay = 120_000)
+    @Scheduled(fixedDelay = 3_600_000, initialDelay = 120_000, scheduler = "batchScheduler")
     public void updateRankedPlayerCount(){
         int result = playerRankRepository.recomputeRankedPlayerCount();
         log.info("Ranked player count is updated: {}", result);
     }
 
     @Transactional
-    @Scheduled(fixedDelay = 86_400_000, initialDelay = 60_000)
+    @Scheduled(fixedDelay = 86_400_000, initialDelay = 60_000, scheduler = "batchScheduler")
     public void updateLadderSnapshot() {
         int insert = rankLeaderboardRepository.insertLadderSnapshot(LocalDate.now());
         int delete = rankLeaderboardRepository.deleteOldLadderSnapshot(LocalDate.now().minusDays(7));

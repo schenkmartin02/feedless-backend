@@ -43,7 +43,7 @@ public class StatsAggregator {
         this.siteStatsRepository = siteStatsRepository;
     }
 
-    @Scheduled(fixedDelayString = "${stats.aggregation.interval-ms}", initialDelayString = "${stats.aggregation.delay.rune-ms}")
+    @Scheduled(fixedDelayString = "${stats.aggregation.interval-ms}", initialDelayString = "${stats.aggregation.delay.rune-ms}", scheduler = "batchScheduler")
     public void recomputeRuneStats(){
         int affectedRows = runeStatsRepository.recomputeRuneStats();
         if (affectedRows > 0) {
@@ -53,7 +53,7 @@ public class StatsAggregator {
         }
     }
 
-    @Scheduled(fixedDelayString = "${stats.aggregation.interval-ms}", initialDelayString = "${stats.aggregation.delay.ban-ms}")
+    @Scheduled(fixedDelayString = "${stats.aggregation.interval-ms}", initialDelayString = "${stats.aggregation.delay.ban-ms}", scheduler = "batchScheduler")
     public void recomputeChampionBanStats(){
         int affectedRows = championBanStatsRepository.recomputeChampionBanStats();
         if (affectedRows > 0) {
@@ -64,7 +64,7 @@ public class StatsAggregator {
     }
 
     @Transactional
-    @Scheduled(fixedDelay = 86_400_000, initialDelayString = "${stats.aggregation.delay.champion-snapshot-ms}")
+    @Scheduled(fixedDelay = 86_400_000, initialDelayString = "${stats.aggregation.delay.champion-snapshot-ms}", scheduler = "batchScheduler")
     public void insertOrDeleteSnapshot() {
         Optional<String> lastPatch = matchRepository.getLastPatch();
         if (lastPatch.isEmpty()) {
@@ -81,7 +81,7 @@ public class StatsAggregator {
     }
 
     @Transactional
-    @Scheduled(fixedDelay = 86_400_000, initialDelayString = "${stats.aggregation.delay.ban-snapshot-ms}")
+    @Scheduled(fixedDelay = 86_400_000, initialDelayString = "${stats.aggregation.delay.ban-snapshot-ms}", scheduler = "batchScheduler")
     public void insertOrDeleteSnapshotBan() {
         Optional<String> lastPatch = matchRepository.getLastPatch();
         if (lastPatch.isEmpty()) {
@@ -98,7 +98,7 @@ public class StatsAggregator {
     }
 
     @Transactional(isolation = Isolation.REPEATABLE_READ)
-    @Scheduled(fixedDelayString = "${stats.aggregation.batch.interval-ms}")
+    @Scheduled(fixedDelayString = "${stats.aggregation.batch.interval-ms}", scheduler = "batchScheduler")
     public void aggregateNextBatch() {
         Optional<Long> upperBound = matchRepository.getUpperBound(batchSize);
         if (upperBound.isEmpty()) {
@@ -115,7 +115,7 @@ public class StatsAggregator {
     }
 
     @Transactional
-    @Scheduled(fixedDelay = 600_000)
+    @Scheduled(fixedDelay = 600_000, scheduler = "batchScheduler")
     public void refreshSiteStats() {
         int result = siteStatsRepository.recomputeSiteStats();
         if (result > 0) {

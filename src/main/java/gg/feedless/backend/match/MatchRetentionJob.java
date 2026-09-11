@@ -25,7 +25,7 @@ public class MatchRetentionJob {
     }
 
     @Transactional
-    @Scheduled(fixedDelayString = "${retention.interval-ms}")
+    @Scheduled(fixedDelayString = "${retention.interval-ms}", scheduler = "batchScheduler")
     public void deleteOldMatches() {
         OffsetDateTime cutoff = OffsetDateTime.now().minusDays(retentionDays);
         int result = matchRepository.deleteOldMatch(cutoff, batchSize);
