@@ -150,7 +150,9 @@ services:
       - ./certs:/etc/caddy/certs:ro
       - caddy_data:/data
       - caddy_config:/config
-    mem_limit: 128m
+    mem_limit: 256m
+    environment:
+      GOMEMLIMIT: 200MiB
     logging:
       driver: json-file
       options:
