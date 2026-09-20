@@ -168,6 +168,7 @@ public class CrawlWorker {
                         playerRankRepository.upsertPlayerRank(claimed.getPuuid(), riotEntry.queueType(), riotEntry.tier(),
                                 riotEntry.rank(), riotEntry.leaguePoints(), riotEntry.wins(), riotEntry.losses());
                     }
+                    playerRepository.saveRankCheck(List.of(claimed.getPuuid()));
                 }
                 List<String> matchList;
                 int count = claimed.getLastCrawledAt() == null ? NEW_CRAWL_MATCH_LIST : RE_CRAWL_MATCH_LIST;
