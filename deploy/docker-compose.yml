@@ -54,6 +54,12 @@ services:
       - random_page_cost=1.1            # SSD: az random olvasas alig dragabb a szekvencialisnal
       - -c
       - max_wal_size=4GB                # ritkabb checkpoint a folyamatos ingest alatt
+      - -c
+      - shared_preload_libraries=pg_stat_statements
+      - -c
+      - pg_stat_statements.max=5000
+      - -c
+      - pg_stat_statements.track=top
     volumes:
       - /mnt/HC_Volume_106695092/pgdata:/var/lib/postgresql/data
     healthcheck:
