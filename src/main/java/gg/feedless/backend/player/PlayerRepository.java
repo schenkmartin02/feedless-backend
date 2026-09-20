@@ -38,9 +38,7 @@ public interface PlayerRepository extends JpaRepository<Player, Long> {
     FROM players p
     WHERE p.platform = :platform
     AND (p.ranks_checked_at IS NULL OR p.ranks_checked_at < :cutoff)
-    AND NOT EXISTS (
-        SELECT 1 FROM player_ranks pr WHERE pr.player_id = p.id
-    )
+    ORDER BY p.ranks_checked_at NULLS FIRST
     LIMIT :batchSize
     """, nativeQuery = true)
     List<String> findTopUnrankedPuuids(@Param("platform") String platform, @Param("cutoff")OffsetDateTime cutoff, @Param("batchSize") int batchSize);
