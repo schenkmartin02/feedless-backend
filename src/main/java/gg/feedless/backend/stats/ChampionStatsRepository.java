@@ -114,20 +114,13 @@ public interface ChampionStatsRepository extends JpaRepository<ChampionStats, Lo
         FROM with_role_total f
         WHERE f.games >= :minGames
     ),
-    ban_scope AS (
-        SELECT
-            rank_tier,
-            MAX(total_matches) AS total_matches
-        FROM champion_ban_stats
+    ban_total AS (
+        SELECT SUM(total_matches) AS total_matches
+        FROM champion_ban_scope
         WHERE platform = :platform
           AND patch = :patch
           AND queue_id = :queueId
           AND rank_tier IN (:tiers)
-        GROUP BY rank_tier
-    ),
-    ban_total AS (
-        SELECT SUM(total_matches) AS total_matches
-        FROM ban_scope
     ),
     ban AS (
         SELECT

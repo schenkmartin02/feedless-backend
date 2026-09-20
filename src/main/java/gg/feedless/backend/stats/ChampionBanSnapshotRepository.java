@@ -18,20 +18,14 @@ public interface ChampionBanSnapshotRepository extends JpaRepository<ChampionBan
           snapshot_date, platform, patch, queue_id, bracket, champion_id,          \s
           bans, total_matches                                                      \s
       )                                                                            \s
-      WITH scope AS (                                                              \s
-          SELECT platform, patch, queue_id, rank_tier,                             \s
-                 MAX(total_matches) AS total_matches                               \s
-          FROM champion_ban_stats                                                  \s
-          WHERE patch = :patch                                                     \s
-            AND rank_tier IN (:tiers)                                              \s
-          GROUP BY platform, patch, queue_id, rank_tier                            \s
-      ),                                                                           \s
-      scope_total AS (                                                             \s
-          SELECT platform, patch, queue_id,                                        \s
-                 SUM(total_matches) AS total_matches                               \s
-          FROM scope                                                               \s
-          GROUP BY platform, patch, queue_id                                       \s
-      ),                                                                           \s
+    WITH scope_total AS (                                                      \s
+               SELECT platform, patch, queue_id,                                      \s
+                      SUM(total_matches) AS total_matches                             \s
+               FROM champion_ban_scope                                                \s
+               WHERE patch = :patch                                                   \s
+                 AND rank_tier IN (:tiers)                                            \s
+               GROUP BY platform, patch, queue_id                                     \s
+           ),                                                                          \s
       champ AS (                                                                   \s
           SELECT platform, patch, queue_id, champion_id,                           \s
                  SUM(bans) AS bans                                                 \s

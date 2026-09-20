@@ -24,6 +24,7 @@ public class StatsAggregator {
     private final ChampionBanStatsRepository championBanStatsRepository;
     private final ChampionBanSnapshotRepository championBanSnapshotRepository;
     private final SiteStatsRepository siteStatsRepository;
+    private final ChampionBanScopeRepository championBanScopeRepository;
 
     private final int batchSize;
 
@@ -31,7 +32,7 @@ public class StatsAggregator {
                            ItemStatsRepository itemStatsRepository, MatchupStatsRepository matchupStatsRepository,
                            MatchRepository matchRepository, ChampionBanStatsRepository championBanStatsRepository,
                            ChampionBanSnapshotRepository championBanSnapshotRepository, @Value("${stats.aggregation.batch.size}") int batchSize,
-                           SiteStatsRepository siteStatsRepository) {
+                           SiteStatsRepository siteStatsRepository, ChampionBanScopeRepository championBanScopeRepository) {
         this.championStatsRepository = championStatsRepository;
         this.runeStatsRepository = runeStatsRepository;
         this.itemStatsRepository = itemStatsRepository;
@@ -41,6 +42,7 @@ public class StatsAggregator {
         this.championBanSnapshotRepository = championBanSnapshotRepository;
         this.batchSize = batchSize;
         this.siteStatsRepository = siteStatsRepository;
+        this.championBanScopeRepository = championBanScopeRepository;
     }
 
     @Scheduled(fixedDelayString = "${stats.aggregation.interval-ms}", initialDelayString = "${stats.aggregation.delay.rune-ms}", scheduler = "batchScheduler")
@@ -50,16 +52,6 @@ public class StatsAggregator {
             log.info("Recomputed {} rune stat rows", affectedRows);
         } else {
             log.warn("Recomputed {} rune stat rows", affectedRows);
-        }
-    }
-
-    @Scheduled(fixedDelayString = "${stats.aggregation.interval-ms}", initialDelayString = "${stats.aggregation.delay.ban-ms}", scheduler = "batchScheduler")
-    public void recomputeChampionBanStats(){
-        int affectedRows = championBanStatsRepository.recomputeChampionBanStats();
-        if (affectedRows > 0) {
-            log.info("Recomputed {} champion ban stat rows", affectedRows);
-        } else {
-            log.warn("Recomputed {} champion ban stat rows", affectedRows);
         }
     }
 
@@ -108,10 +100,12 @@ public class StatsAggregator {
         int championStats = championStatsRepository.recomputeChampionStats(upperBoundGet);
         int itemStats = itemStatsRepository.recomputeItemStats(upperBoundGet);
         int matchupStats = matchupStatsRepository.recomputeMatchupStats(upperBoundGet);
+        int championBan = championBanStatsRepository.championBanStats(upperBoundGet);
+        int championBanScope = championBanScopeRepository.championBanScope(upperBoundGet);
 
         int result = matchRepository.setAggregatedAt(upperBoundGet);
 
-        log.info("Aggregated {} matches up to id {}: {} champion, {} item, {} matchup rows", result, upperBoundGet, championStats, itemStats, matchupStats);
+        log.info("Aggregated {} matches up to id {}: {} champion, {} item, {} matchup rows, {} champion ban and {} scope", result, upperBoundGet, championStats, itemStats, matchupStats, championBan, championBanScope);
     }
 
     @Transactional

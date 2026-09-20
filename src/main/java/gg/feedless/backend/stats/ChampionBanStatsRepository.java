@@ -3,6 +3,7 @@ package gg.feedless.backend.stats;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.transaction.annotation.Transactional;
 
 public interface ChampionBanStatsRepository extends JpaRepository<ChampionBanStats, Long> {
@@ -79,4 +80,36 @@ public interface ChampionBanStatsRepository extends JpaRepository<ChampionBanSta
         updated_at    = NOW();
     """, nativeQuery = true)
     int recomputeChampionBanStats();
+
+    @Transactional
+    @Modifying
+    @Query(value = """
+    INSERT INTO champion_ban_stats (                                                 \s
+          platform, patch, queue_id, champion_id, rank_tier, bans, total_matches,      \s
+      updated_at                                                                       \s
+      )                                                                                \s
+      WITH match_tier AS (                                                             \s
+          SELECT m.id, m.platform, m.patch, m.queue_id, m.bans,                        \s
+                 COALESCE(mode() WITHIN GROUP (ORDER BY pr.tier), 'UNKNOWN') AS        \s
+      rank_tier                                                                        \s
+          FROM matches m                                                               \s
+          JOIN participants p ON p.match_id = m.id                                     \s
+          LEFT JOIN player_ranks pr ON pr.player_id = p.player_id                      \s
+                                   AND pr.queue_type = 'RANKED_SOLO_5x5'               \s
+          WHERE m.bans IS NOT NULL                                                     \s
+            AND m.game_duration >= 300                                                 \s
+            AND m.aggregated_at IS NULL                                                \s
+            AND m.id <= :upperBound                                                    \s
+          GROUP BY m.id                                                                \s
+      )                                                                                \s
+      SELECT mt.platform, mt.patch, mt.queue_id, ban.champion_id, mt.rank_tier,        \s
+             COUNT(DISTINCT mt.id), 0, NOW()                                           \s
+      FROM match_tier mt, unnest(mt.bans) AS ban(champion_id)                          \s
+      GROUP BY mt.platform, mt.patch, mt.queue_id, ban.champion_id, mt.rank_tier       \s
+      ON CONFLICT (platform, patch, queue_id, champion_id, rank_tier)                  \s
+      DO UPDATE SET                                                                    \s
+          bans       = champion_ban_stats.bans + EXCLUDED.bans,                        \s
+          updated_at = NOW();
+    """, nativeQuery = true)
+    int championBanStats(@Param("upperBound") long upperBound);
 }
