@@ -22,8 +22,7 @@ public class LadderWrite {
 
     @Transactional
     public void enrich(String platform, String queueType, int queueId, int maxPosition) {
-        rankLeaderboardRepository.updateRankLeaderboardKda(platform, queueType, maxPosition, queueId);
-        rankLeaderboardRepository.updateRankLeaderboardTopChamps(platform, queueType, maxPosition, queueId);
+        rankLeaderboardRepository.enrichRankLeaderboard(platform, queueType, maxPosition, queueId);
         rankLeaderboardRepository.recomputeDelta(LocalDate.now(), platform, queueType, maxPosition);
     }
 }
