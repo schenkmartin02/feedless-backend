@@ -37,8 +37,8 @@ public interface PlayerRepository extends JpaRepository<Player, Long> {
     SELECT p.puuid
     FROM players p
     WHERE p.platform = :platform
-    AND (p.ranks_checked_at IS NULL OR p.ranks_checked_at < :cutoff)
-    ORDER BY p.ranks_checked_at NULLS FIRST
+    AND p.ranks_checked_at < :cutoff
+    ORDER BY p.ranks_checked_at
     LIMIT :batchSize
     """, nativeQuery = true)
     List<String> findTopUnrankedPuuids(@Param("platform") String platform, @Param("cutoff")OffsetDateTime cutoff, @Param("batchSize") int batchSize);
