@@ -443,9 +443,9 @@ roadmap:
       hu: "Gyorsabb statisztika-újraszámolás"
       en: "Faster stats recomputation"
     note:
-      hu: "Tervezés kész"
-      en: "Design done"
-    progress: 25
+      hu: "A ban-statisztika kész, a rúnák hátravannak"
+      en: "Ban stats done, runes still to come"
+    progress: 70
 
   - stage: next
     title:
